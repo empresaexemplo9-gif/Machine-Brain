@@ -28,10 +28,16 @@ import { chromium } from "playwright";
 const PORTA = Number(process.env.MB_PORTA_TESTE ?? 3311);
 const BASE = `http://127.0.0.1:${PORTA}`;
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+const CHAVE_PUBLICA =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  "";
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !CHAVE_PUBLICA) {
   console.log(
     "\nPULADO: verificação de fluxos precisa de um projeto Supabase.\n" +
-      "  Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY apontando\n" +
+      "  Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\n" +
+      "  (ou NEXT_PUBLIC_SUPABASE_ANON_KEY) apontando\n" +
       "  para um projeto de DESENVOLVIMENTO (o percurso cria contas de verdade),\n" +
       "  rode `npm run build` com elas presentes e tente de novo.\n" +
       "  O schema e as políticas de RLS continuam cobertos por `npm run verificar:rls`.\n",
@@ -169,7 +175,7 @@ try {
     if ((await pagina.locator('[data-teste="supabase-nao-configurado"]').count()) > 0) {
       throw new Error(
         "a aplicação subiu sem configuração do Supabase — refaça `npm run build` " +
-          "com NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY definidas",
+          "com NEXT_PUBLIC_SUPABASE_URL e a chave pública definidas",
       );
     }
   });

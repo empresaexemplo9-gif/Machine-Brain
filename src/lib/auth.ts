@@ -33,7 +33,8 @@ export class ErroDeAutenticacao extends Error {}
 
 const SEM_PROJETO =
   "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e " +
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY em .env.local — veja o README.";
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou NEXT_PUBLIC_SUPABASE_ANON_KEY) no " +
+  ".env.local, ou nas variáveis de ambiente do deploy, e refaça o build — veja o README.";
 
 // ---------------------------------------------------------------------------
 // Cadastro e login
