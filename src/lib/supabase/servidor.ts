@@ -43,7 +43,9 @@ export function exigirSupabaseConfigurado(): void {
   if (!SUPABASE_CONFIGURADO) {
     throw new ErroDeConfiguracao(
       "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e " +
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY em .env.local (veja .env.example).",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou NEXT_PUBLIC_SUPABASE_ANON_KEY) " +
+        "no .env.local, ou nas variáveis de ambiente do deploy, e refaça o build " +
+        "(veja .env.example).",
     );
   }
 }

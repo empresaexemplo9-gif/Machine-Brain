@@ -49,7 +49,8 @@ console.log("\nConfiguração");
 if (!URL_PROJETO || !CHAVE) {
   console.log(
     "  ✗ variáveis ausentes\n" +
-      "      Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY\n" +
+      "      Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\n" +
+      "      (ou NEXT_PUBLIC_SUPABASE_ANON_KEY)\n" +
       "      em .env.local (Painel do Supabase → Project Settings → API).\n",
   );
   process.exit(1);

@@ -25,6 +25,9 @@ jobs:
     # caminho suportado — o contexto secrets não é legível dentro de um `if`.
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL_DEV }}
+      # Só uma das duas precisa existir: o painel novo do Supabase entrega a
+      # chave publicável (sb_publishable_...) e o antigo, a anon em JWT.
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY_DEV }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
 
     steps:
@@ -63,7 +66,7 @@ jobs:
 
       # O percurso em navegador precisa de um projeto Supabase e CRIA CONTAS
       # nele. Sem os secrets configurados o passo se pula sozinho com aviso, em
-      # vez de falhar; basta apontar SUPABASE_URL_DEV e SUPABASE_ANON_KEY_DEV
+      # vez de falhar; basta apontar SUPABASE_URL_DEV e a chave publicável (ou anon)
       # para um projeto de DESENVOLVIMENTO para o percurso completo passar a
       # rodar a cada PR.
       # Roda antes do percurso porque a falha aqui é muito mais legível: diz se

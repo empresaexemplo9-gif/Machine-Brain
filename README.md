@@ -88,6 +88,29 @@ falhar com erro de conexão.
 > As variáveis `NEXT_PUBLIC_` entram no bundle na hora do build. Depois de
 > alterá-las, refaça o build.
 
+### 3. Publicar
+
+Num deploy não existe `.env.local`: as mesmas variáveis vão nas variáveis de
+ambiente do provedor. Na Vercel, em **Settings → Environment Variables**:
+
+| Variável | Valor |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (ou a anon em `NEXT_PUBLIC_SUPABASE_ANON_KEY`) |
+| `ANTHROPIC_API_KEY` | a chave do modelo |
+
+Marque os ambientes em que cada uma vale. É aqui que o erro costuma acontecer:
+definir só em *Preview* deixa o domínio de produção — o endereço que as pessoas
+abrem — exatamente como estava.
+
+Depois de salvar, **faça um novo deploy**. Salvar a variável não refaz o build,
+e as `NEXT_PUBLIC_` já estão compiladas dentro do bundle antigo: sem o novo
+build, a tela de cadastro continua mostrando *"Supabase não configurado"* mesmo
+com tudo preenchido no painel.
+
+A chave `service_role` (`sb_secret_...`) não entra em lugar nenhum: ela ignora o
+RLS, e a aplicação não a usa.
+
 ## Verificação
 
 ```bash
@@ -124,8 +147,9 @@ instalados, rode antes `npx playwright install chromium`.
 O CI em [`.github/workflows/verificar.yml`](.github/workflows/verificar.yml) roda
 tipos, catálogo, RLS e build a cada push e PR. O diagnóstico de conexão e o
 percurso em navegador entram automaticamente assim que os secrets
-`SUPABASE_URL_DEV` e `SUPABASE_ANON_KEY_DEV` existirem no repositório — aponte-os
-para um projeto de **desenvolvimento**, porque o percurso cria contas.
+`SUPABASE_URL_DEV` e `SUPABASE_PUBLISHABLE_KEY_DEV` (ou `SUPABASE_ANON_KEY_DEV`)
+existirem no repositório — aponte-os para um projeto de **desenvolvimento**,
+porque o percurso cria contas.
 
 ## Estrutura
 
