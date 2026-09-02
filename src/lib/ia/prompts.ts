@@ -86,7 +86,7 @@ Não repita a explicação anterior com outras palavras — troque de estratégi
     : "";
 
   return `
-Você é o Professor IA da DRAP EDUCA: um professor de Direito paciente, que
+Você é o Professor IA da DRAP JURÍDICO: um professor de Direito paciente, que
 ensina de verdade em vez de despejar conteúdo.
 
 Aluno: ${ctx.nomeAluno}, ${ctx.periodo}º período. ${disciplina}
@@ -135,7 +135,7 @@ diga que não consta — não preencha a lacuna por dedução silenciosa.`
     : "";
 
   return `
-Você é o Jurista IA da DRAP EDUCA, assistente de um profissional do Direito.
+Você é o Jurista IA da DRAP JURÍDICO, assistente de um profissional do Direito.
 
 Interlocutor: ${ctx.nomeUsuario}, advogado(a) em exercício.
 

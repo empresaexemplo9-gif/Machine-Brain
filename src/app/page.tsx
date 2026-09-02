@@ -160,7 +160,7 @@ export default async function Inicio() {
       </section>
 
       <footer className="border-t border-[var(--color-borda)] py-8 text-xs text-[var(--color-texto-fraco)]">
-        DRAP EDUCA — apoio ao estudo e à prática jurídica. Não substitui a análise de um
+        DRAP JURÍDICO — apoio ao estudo e à prática jurídica. Não substitui a análise de um
         advogado responsável pelo caso.
       </footer>
     </main>
