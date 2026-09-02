@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Identidade visual
+   Escuro por padrão: a plataforma é feita para sessões longas de estudo e de
+   leitura de processo. O dourado marca autoridade jurídica; o azul marca ação.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-fundo: #0a0e13;
+  --color-superficie: #111820;
+  --color-superficie-2: #17202b;
+  --color-borda: #22303d;
+  --color-borda-forte: #33475a;
+
+  --color-texto: #e8eef4;
+  --color-texto-suave: #93a4b5;
+  --color-texto-fraco: #61748a;
+
+  --color-ouro: #d4a843;
+  --color-ouro-fraco: #6b5520;
+  --color-acento: #4d8ff0;
+  --color-acento-fraco: #1e3f6d;
+
+  --color-verde: #3fb27f;
+  --color-ambar: #d9a441;
+  --color-vermelho: #e0605e;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", ui-serif, Georgia, "Times New Roman", serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fundo com um leve halo, para a página não parecer um retângulo morto. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(77, 143, 240, 0.09), transparent 60%),
+    radial-gradient(50rem 35rem at 95% 5%, rgba(212, 168, 67, 0.07), transparent 60%);
+  z-index: 0;
+}
+
+::selection {
+  background: var(--color-acento-fraco);
+  color: #fff;
+}
+
+/* Barra de rolagem discreta, para não brigar com o conteúdo. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-borda-forte) transparent;
+}
+
+@layer components {
+  .cartao {
+    @apply rounded-xl border border-[var(--color-borda)] bg-[var(--color-superficie)] p-5;
+  }
+
+  /* Repete as utilidades de .cartao em vez de @apply: no Tailwind v4 o @apply
+     só aceita utilitários, não classes de componente definidas aqui. */
+  .cartao-interativo {
+    @apply rounded-xl border border-[var(--color-borda)] bg-[var(--color-superficie)] p-5
+           transition-colors hover:border-[var(--color-borda-forte)] hover:bg-[var(--color-superficie-2)];
+  }
+
+  .rotulo {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-[var(--color-texto-fraco)];
+  }
+
+  .campo {
+    @apply w-full rounded-lg border border-[var(--color-borda)] bg-[var(--color-fundo)] px-3.5 py-2.5
+           text-sm text-[var(--color-texto)] outline-none transition-colors
+           placeholder:text-[var(--color-texto-fraco)]
+           focus:border-[var(--color-acento)] focus:ring-1 focus:ring-[var(--color-acento)];
+  }
+
+  .botao {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-acento)] px-4 py-2.5
+           text-sm font-semibold text-white transition-opacity hover:opacity-90
+           disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .botao-secundario {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--color-borda-forte)]
+           bg-transparent px-4 py-2.5 text-sm font-medium text-[var(--color-texto-suave)]
+           transition-colors hover:border-[var(--color-acento)] hover:text-[var(--color-texto)]
+           disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .selo {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium;
+  }
+
+  .titulo-secao {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-texto-fraco)];
+  }
+
+  /* Texto gerado pelo modelo, renderizado a partir de markdown simplificado. */
+  .prosa {
+    @apply text-[0.9375rem] leading-relaxed text-[var(--color-texto)];
+  }
+  .prosa h2 {
+    @apply mt-5 mb-2 text-base font-semibold text-[var(--color-texto)];
+  }
+  .prosa h3 {
+    @apply mt-4 mb-1.5 text-sm font-semibold text-[var(--color-texto-suave)];
+  }
+  .prosa p {
+    @apply my-2.5;
+  }
+  .prosa ul {
+    @apply my-2.5 list-disc space-y-1 pl-5;
+  }
+  .prosa ol {
+    @apply my-2.5 list-decimal space-y-1 pl-5;
+  }
+  .prosa strong {
+    @apply font-semibold text-white;
+  }
+  .prosa code {
+    @apply rounded bg-[var(--color-superficie-2)] px-1.5 py-0.5 text-[0.85em];
+  }
+}
+
+/* Cursor de digitação enquanto o modelo escreve. */
+@keyframes piscar {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+.cursor-ia::after {
+  content: "▍";
+  margin-left: 1px;
+  animation: piscar 1s steps(2) infinite;
+  color: var(--color-acento);
+}
