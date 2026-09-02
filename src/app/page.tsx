@@ -1,8 +1,19 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/auth";
 import { CATALOGO } from "@/lib/fontes";
 import { DISCIPLINAS } from "@/lib/curriculo";
+
+/**
+ * Sempre dinâmica: esta rota depende da sessão.
+ *
+ * Sem isso o Next a pré-renderiza quando o build roda sem as variáveis do
+ * Supabase — porque aí a leitura de sessão nem chega a tocar nos cookies — e o
+ * resultado é uma página congelada em "deslogado" para todo mundo. A garantia
+ * não pode depender de a configuração estar presente na hora do build.
+ */
+export const dynamic = "force-dynamic";
 
 const JORNADA = [
   { fase: "1º período", texto: "Entra sem saber o que é uma norma jurídica." },
@@ -32,10 +43,7 @@ export default async function Inicio() {
   return (
     <main className="mx-auto max-w-6xl px-5 pb-24">
       <header className="flex items-center justify-between py-6">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">⚖️</span>
-          <span className="text-sm font-bold tracking-tight">Machine Brain</span>
-        </div>
+        <Logo />
         <div className="flex items-center gap-3">
           <Link href="/entrar" className="text-sm text-[var(--color-texto-suave)] hover:text-[var(--color-texto)]">
             Entrar
@@ -152,7 +160,7 @@ export default async function Inicio() {
       </section>
 
       <footer className="border-t border-[var(--color-borda)] py-8 text-xs text-[var(--color-texto-fraco)]">
-        Machine Brain — apoio ao estudo e à prática jurídica. Não substitui a análise de um
+        DRAP EDUCA — apoio ao estudo e à prática jurídica. Não substitui a análise de um
         advogado responsável pelo caso.
       </footer>
     </main>

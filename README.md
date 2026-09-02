@@ -1,4 +1,4 @@
-# Machine Brain
+# DRAP EDUCA
 
 **A plataforma que acompanha você do primeiro período de Direito até a advocacia.**
 
@@ -31,11 +31,38 @@ A arquitetura foi montada em volta disso:
 
 Os detalhes estão em [`docs/FUNDAMENTACAO.md`](docs/FUNDAMENTACAO.md).
 
+## Stack
+
+Next.js 16 (App Router) e **Supabase** — Postgres com Row Level Security para os
+dados, Supabase Auth para identidade. Não existe camada de backend própria entre
+a aplicação e o banco: as páginas são Server Components que consultam o Supabase
+com a sessão do próprio usuário, e é o RLS que garante que ninguém alcance a
+linha de outro.
+
+A aplicação **nunca usa a chave `service_role`**. Toda consulta passa pela chave
+pública mais o JWT do usuário, então um erro de escopo no código vira "nenhuma
+linha" em vez de vazamento.
+
 ## Rodando
+
+### 1. Criar o projeto Supabase
+
+No [painel do Supabase](https://supabase.com/dashboard), crie um projeto e
+aplique a migração:
+
+- **Pelo SQL Editor:** cole o conteúdo de
+  [`supabase/migrations/20260902060000_esquema_inicial.sql`](supabase/migrations)
+  e execute.
+- **Pela CLI:** `supabase link --project-ref <ref> && supabase db push`.
+
+Em **Authentication → Providers → Email**, desative *Confirm email* se quiser
+que o cadastro já entre com sessão (recomendado em desenvolvimento).
+
+### 2. Rodar a aplicação
 
 ```bash
 npm install
-cp .env.example .env.local     # preencha ANTHROPIC_API_KEY e MB_SESSION_SECRET
+cp .env.example .env.local     # preencha as variáveis do Supabase
 npm run dev                    # http://localhost:3000
 ```
 
@@ -43,28 +70,48 @@ Sem `ANTHROPIC_API_KEY` a aplicação sobe do mesmo jeito, em modo demonstraçã
 navegação, catálogo de fontes, cadastro e histórico funcionam; as respostas do
 modelo são substituídas por um aviso explícito.
 
-O banco é um arquivo SQLite criado sozinho em `data/machine-brain.db` no primeiro
-acesso — não há passo de migração para rodar.
+Sem as variáveis do Supabase, as telas de acesso explicam o que falta em vez de
+falhar com erro de conexão.
+
+> As variáveis `NEXT_PUBLIC_` entram no bundle na hora do build. Depois de
+> alterá-las, refaça o build.
 
 ## Verificação
 
 ```bash
 npm run typecheck            # tsc --noEmit
 npm run verificar:catalogo   # integridade e alcançabilidade das fontes jurídicas
+npm run verificar:rls        # prova as políticas de RLS contra um Postgres real
 npm run build                # build de produção
-npm run verificar:fluxos     # 24 checagens de ponta a ponta em navegador real
+npm run verificar:fluxos     # 25 checagens de ponta a ponta em navegador real
 npm run verificar            # tudo acima, em ordem
 ```
 
-`verificar:fluxos` sobe o servidor contra um banco descartável e percorre o
-caminho do usuário num Chromium de verdade — **deliberadamente sem chave de
-API**, porque é aí que se comprova que a plataforma avisa em vez de inventar.
-Se os navegadores do Playwright não estiverem instalados na máquina, rode antes
-`npx playwright install chromium`.
+**`verificar:rls`** é o mais importante depois de mexer no schema. Ele sobe um
+Postgres descartável, recria localmente o que o Supabase provê pronto (schema
+`auth`, papéis, `auth.uid()`), aplica as migrações e prova que um usuário não
+lê, insere, altera nem apaga a linha de outro — por nenhum caminho. Também falha
+se alguma tabela nova entrar sem RLS ou sem política. Não precisa de rede nem de
+projeto Supabase.
+
+**`verificar:fluxos`** percorre o caminho do usuário num Chromium de verdade.
+Precisa de um projeto Supabase e **cria contas nele** — aponte para um projeto de
+desenvolvimento. Sem as variáveis definidas, o passo se pula com aviso. Roda
+deliberadamente sem chave de API, porque é aí que se comprova que a plataforma
+avisa em vez de inventar. Se os navegadores do Playwright não estiverem
+instalados, rode antes `npx playwright install chromium`.
+
+O CI em [`.github/workflows/verificar.yml`](.github/workflows/verificar.yml) roda
+tipos, catálogo, RLS e build a cada push e PR. O percurso em navegador entra
+automaticamente assim que os secrets `SUPABASE_URL_DEV` e `SUPABASE_ANON_KEY_DEV`
+existirem no repositório.
 
 ## Estrutura
 
 ```
+supabase/
+├── migrations/            schema, políticas de RLS e trigger de cadastro
+└── testes/                stub do schema auth + provas de isolamento
 src/
 ├── app/
 │   ├── (auth)/            entrar e criar conta
@@ -73,14 +120,15 @@ src/
 │   ├── profissional/      painel, Jurista IA, documentos, roteiro de atuação
 │   ├── perfil/
 │   └── api/chat/          chat em streaming (NDJSON) com auditoria de citações
-├── components/            Chat, Prosa (markdown + citações), PainelDeFontes…
+├── proxy.ts               renova a sessão do Supabase a cada requisição
+├── components/            Logo, Chat, Prosa (markdown + citações), PainelDeFontes…
 └── lib/
     ├── fontes/            catálogo jurídico, busca BM25 e auditoria de citações
+    ├── supabase/          clientes de servidor e de proxy
     ├── ia/                cliente do modelo, prompts e schemas de saída
     ├── servicos/          questões, documentos, roteiro, plano, desempenho
     ├── curriculo.ts       grade de referência do curso de Direito
-    ├── auth.ts            sessão em cookie assinado, perfil e matrículas
-    └── db.ts              SQLite e schema
+    └── auth.ts            sessão, perfil e matrículas
 ```
 
 Arquitetura e decisões: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
@@ -88,12 +136,15 @@ Escopo de V1, V2 e V3: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Estado atual
 
-Este repositório entrega o **V1 (MVP)**. O que já funciona, o que está fora do
-escopo e o que vem a seguir estão listados no roadmap. Um aviso honesto: os
-caminhos que dependem do modelo foram exercitados apenas em modo demonstração —
-a validação contra a API real ainda precisa ser feita com uma chave configurada.
+Este repositório entrega o **V1 (MVP)**. Dois avisos honestos:
+
+- Os caminhos que dependem do modelo foram exercitados apenas em modo
+  demonstração — a validação contra a API real ainda precisa ser feita com uma
+  chave configurada.
+- O schema e as políticas de RLS estão provados contra Postgres real, mas o
+  percurso completo contra um projeto Supabase de verdade ainda não foi rodado.
 
 ---
 
-Machine Brain é apoio ao estudo e à prática jurídica. Não substitui a análise do
+DRAP EDUCA é apoio ao estudo e à prática jurídica. Não substitui a análise do
 advogado responsável pelo caso.

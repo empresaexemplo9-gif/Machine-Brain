@@ -2,13 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import {
-  ErroDeAutenticacao,
-  autenticar,
-  criarConta,
-  criarSessao,
-  perfilDoEstudante,
-} from "@/lib/auth";
+import { ErroDeAutenticacao, autenticar, criarConta, perfilDoEstudante } from "@/lib/auth";
 
 export interface EstadoDoFormulario {
   erro?: string;
@@ -37,10 +31,9 @@ export async function entrarAction(
 
   let destino = "/estudante";
   try {
-    const usuario = await autenticar(validado.data.email, validado.data.senha);
-    await criarSessao(usuario.id);
+    await autenticar(validado.data.email, validado.data.senha);
     // Quem ainda não passou pelo onboarding não tem o que ver no painel.
-    if (!perfilDoEstudante(usuario.id)) destino = "/onboarding";
+    if (!(await perfilDoEstudante())) destino = "/onboarding";
   } catch (erro) {
     if (erro instanceof ErroDeAutenticacao) return { erro: erro.message };
     throw erro;
@@ -61,9 +54,10 @@ export async function criarContaAction(
   if (!validado.success) return { erro: validado.error.issues[0].message };
 
   try {
-    const usuario = await criarConta(validado.data);
-    await criarSessao(usuario.id);
+    await criarConta(validado.data);
   } catch (erro) {
+    // Inclui o caso de "conta criada, confirme o e-mail": não é falha, mas
+    // também não é motivo para mandar o usuário a uma área que vai expulsá-lo.
     if (erro instanceof ErroDeAutenticacao) return { erro: erro.message };
     throw erro;
   }

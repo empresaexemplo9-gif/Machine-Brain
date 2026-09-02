@@ -1,13 +1,21 @@
 /**
  * Verificação de ponta a ponta dos fluxos do V1.
  *
- * Sobe o servidor de produção contra um banco descartável e percorre, num
- * navegador real, o caminho que um usuário faz: criar conta, montar a grade,
- * navegar pelos dois ambientes, conversar com a IA, enviar documento.
+ * Percorre, num navegador real, o caminho que um usuário faz: criar conta,
+ * montar a grade, navegar pelos dois ambientes, conversar com a IA, enviar
+ * documento.
  *
  * Roda sem ANTHROPIC_API_KEY de propósito. É justamente aí que se verifica a
  * promessa central da plataforma: sem modelo, ela avisa que está em modo
  * demonstração e continua mostrando as fontes reais — sem inventar direito.
+ *
+ * ATENÇÃO: precisa de um projeto Supabase e CRIA CONTAS DE VERDADE nele.
+ * Aponte para um projeto de desenvolvimento, nunca para produção. O projeto
+ * também precisa estar com a confirmação de e-mail desativada, senão o cadastro
+ * não devolve sessão e o percurso para no primeiro passo.
+ *
+ * Como as variáveis NEXT_PUBLIC_ entram no bundle na compilação, o build tem de
+ * ter sido feito com elas presentes:
  *
  *   npm run build && npm run verificar:fluxos
  */
@@ -19,6 +27,18 @@ import { chromium } from "playwright";
 
 const PORTA = Number(process.env.MB_PORTA_TESTE ?? 3311);
 const BASE = `http://127.0.0.1:${PORTA}`;
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  console.log(
+    "\nPULADO: verificação de fluxos precisa de um projeto Supabase.\n" +
+      "  Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY apontando\n" +
+      "  para um projeto de DESENVOLVIMENTO (o percurso cria contas de verdade),\n" +
+      "  rode `npm run build` com elas presentes e tente de novo.\n" +
+      "  O schema e as políticas de RLS continuam cobertos por `npm run verificar:rls`.\n",
+  );
+  process.exit(0);
+}
+
 const trabalho = mkdtempSync(join(tmpdir(), "machine-brain-e2e-"));
 
 let falhas = 0;
@@ -95,9 +115,9 @@ writeFileSync(pdfDigitalizado, montarPdf([]));
 const servidor = spawn("npx", ["next", "start", "-p", String(PORTA)], {
   env: {
     ...process.env,
+    // Sem chave: o percurso precisa provar que a plataforma avisa em vez de
+    // inventar quando o modelo não está disponível.
     ANTHROPIC_API_KEY: "",
-    MB_SESSION_SECRET: "segredo-descartavel-de-verificacao-automatizada",
-    MB_DATABASE_PATH: join(trabalho, "teste.db"),
     NODE_ENV: "production",
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -143,6 +163,16 @@ try {
   });
 
   const email = `verificacao${Date.now()}@exemplo.com`;
+
+  await passo("o build embutiu a configuração do Supabase", async () => {
+    await pagina.goto(`${BASE}/entrar`, { waitUntil: "networkidle" });
+    if ((await pagina.locator('[data-teste="supabase-nao-configurado"]').count()) > 0) {
+      throw new Error(
+        "a aplicação subiu sem configuração do Supabase — refaça `npm run build` " +
+          "com NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY definidas",
+      );
+    }
+  });
 
   await passo("landing apresenta a proposta", async () => {
     await pagina.goto(BASE, { waitUntil: "networkidle" });

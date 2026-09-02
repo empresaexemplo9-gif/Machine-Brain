@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { disciplinaPorSlug } from "@/lib/curriculo";
 
 export interface DesempenhoDisciplina {
@@ -22,37 +22,41 @@ function classificar(percentual: number): DesempenhoDisciplina["status"] {
   return "critico";
 }
 
-export function desempenhoDoAluno(usuarioId: number): DesempenhoDisciplina[] {
-  const linhas = db()
-    .prepare(
-      `SELECT disciplina_slug,
-              SUM(acertos)  AS acertos,
-              SUM(total)    AS total,
-              COUNT(*)      AS simulados
-         FROM simulados
-        WHERE usuario_id = ? AND finalizado_em IS NOT NULL
-        GROUP BY disciplina_slug`,
-    )
-    .all(usuarioId) as Array<{
-    disciplina_slug: string;
-    acertos: number;
-    total: number;
-    simulados: number;
-  }>;
+export async function desempenhoDoAluno(): Promise<DesempenhoDisciplina[]> {
+  const supabase = await supabaseServidor();
 
-  return linhas
-    .map((l) => {
-      const disciplina = disciplinaPorSlug(l.disciplina_slug);
-      const percentual = l.total > 0 ? Math.round((l.acertos / l.total) * 100) : 0;
+  // A agregação vem para o Node em vez de virar uma view no banco: são dezenas
+  // de simulados por aluno, e uma view a mais é uma migração a mais para
+  // manter. Se um dia o volume crescer, isto vira uma view com RLS herdado.
+  const { data } = await supabase
+    .from("simulados")
+    .select("disciplina_slug, acertos, total")
+    .not("finalizado_em", "is", null);
+
+  const porDisciplina = new Map<string, { acertos: number; total: number; simulados: number }>();
+  for (const linha of data ?? []) {
+    const slug = linha.disciplina_slug as string;
+    const atual = porDisciplina.get(slug) ?? { acertos: 0, total: 0, simulados: 0 };
+    atual.acertos += (linha.acertos as number | null) ?? 0;
+    atual.total += (linha.total as number | null) ?? 0;
+    atual.simulados += 1;
+    porDisciplina.set(slug, atual);
+  }
+
+  return [...porDisciplina.entries()]
+    .map(([slug, agregado]) => {
+      const disciplina = disciplinaPorSlug(slug);
+      const percentual =
+        agregado.total > 0 ? Math.round((agregado.acertos / agregado.total) * 100) : 0;
       return {
-        slug: l.disciplina_slug,
-        nome: disciplina?.nome ?? l.disciplina_slug,
+        slug,
+        nome: disciplina?.nome ?? slug,
         emoji: disciplina?.emoji ?? "📘",
-        acertos: l.acertos,
-        total: l.total,
+        acertos: agregado.acertos,
+        total: agregado.total,
         percentual,
         status: classificar(percentual),
-        simulados: l.simulados,
+        simulados: agregado.simulados,
       };
     })
     .sort((a, b) => a.percentual - b.percentual);

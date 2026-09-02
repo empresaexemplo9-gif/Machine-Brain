@@ -1,141 +1,133 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
-import { SignJWT, jwtVerify } from "jose";
-import { db } from "./db";
+import { supabaseServidor } from "./supabase/servidor";
+import { SUPABASE_CONFIGURADO } from "./supabase/config";
 
-const COOKIE = "mb_sessao";
-const DURACAO_DIAS = 30;
+/**
+ * Identidade e perfil.
+ *
+ * A autenticação é do Supabase Auth: e-mail e senha vivem em auth.users e a
+ * sessão anda em cookies httpOnly gerenciados por @supabase/ssr. O que é do
+ * produto — nome, ambiente, período, grade — fica em tabelas nossas, protegidas
+ * por RLS. Nenhuma consulta aqui filtra por usuário na mão: o RLS já faz isso,
+ * e o filtro na aplicação seria uma segunda fonte de verdade para errar.
+ */
 
 export interface Usuario {
-  id: number;
+  id: string;
   email: string;
   nome: string;
   ambiente: "estudante" | "profissional";
 }
 
 export interface PerfilEstudante {
-  usuario_id: number;
+  usuario_id: string;
   periodo: number;
   faculdade: string;
   objetivo: string;
   nivel: string;
 }
 
-function segredo(): Uint8Array {
-  const bruto = process.env.MB_SESSION_SECRET;
-  if (!bruto || bruto.length < 16) {
-    // Falhar aqui é melhor do que assinar sessões com um segredo previsível.
-    throw new Error(
-      "MB_SESSION_SECRET ausente ou curto demais. Defina-o no .env.local (veja .env.example).",
-    );
-  }
-  return new TextEncoder().encode(bruto);
-}
+export class ErroDeAutenticacao extends Error {}
+
+const SEM_PROJETO =
+  "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e " +
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY em .env.local — veja o README.";
 
 // ---------------------------------------------------------------------------
 // Cadastro e login
 // ---------------------------------------------------------------------------
 
-export class ErroDeAutenticacao extends Error {}
-
 export async function criarConta(entrada: {
   nome: string;
   email: string;
   senha: string;
-}): Promise<Usuario> {
-  const email = entrada.email.trim().toLowerCase();
-  const conexao = db();
+}): Promise<void> {
+  if (!SUPABASE_CONFIGURADO) throw new ErroDeAutenticacao(SEM_PROJETO);
 
-  const existente = conexao.prepare("SELECT id FROM usuarios WHERE email = ?").get(email);
-  if (existente) throw new ErroDeAutenticacao("Já existe uma conta com esse e-mail.");
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase.auth.signUp({
+    email: entrada.email.trim().toLowerCase(),
+    password: entrada.senha,
+    // O trigger ao_criar_usuario lê este metadata para montar o perfil.
+    options: { data: { nome: entrada.nome.trim() } },
+  });
 
-  const hash = await bcrypt.hash(entrada.senha, 10);
-  const resultado = conexao
-    .prepare("INSERT INTO usuarios (email, senha_hash, nome) VALUES (?, ?, ?)")
-    .run(email, hash, entrada.nome.trim());
-
-  return {
-    id: Number(resultado.lastInsertRowid),
-    email,
-    nome: entrada.nome.trim(),
-    ambiente: "estudante",
-  };
-}
-
-export async function autenticar(email: string, senha: string): Promise<Usuario> {
-  const registro = db()
-    .prepare("SELECT id, email, nome, senha_hash, ambiente FROM usuarios WHERE email = ?")
-    .get(email.trim().toLowerCase()) as
-    | { id: number; email: string; nome: string; senha_hash: string; ambiente: string }
-    | undefined;
-
-  // Mensagem única para e-mail inexistente e senha errada: não entregamos a
-  // um atacante a informação de quais e-mails têm conta.
-  const generico = "E-mail ou senha incorretos.";
-  if (!registro) {
-    // Custo de hash mesmo sem usuário, para o tempo de resposta não denunciar.
-    await bcrypt.compare(senha, "$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinv");
-    throw new ErroDeAutenticacao(generico);
+  if (error) {
+    throw new ErroDeAutenticacao(
+      error.message.includes("already registered")
+        ? "Já existe uma conta com esse e-mail."
+        : error.message,
+    );
   }
 
-  const confere = await bcrypt.compare(senha, registro.senha_hash);
-  if (!confere) throw new ErroDeAutenticacao(generico);
+  // Com confirmação de e-mail ligada no projeto, o cadastro não devolve sessão.
+  // Dizer isso é melhor do que redirecionar para uma área que vai expulsá-lo.
+  if (!data.session) {
+    throw new ErroDeAutenticacao(
+      "Conta criada. Confirme o e-mail que enviamos antes de entrar. " +
+        "(Para desligar essa etapa, desative a confirmação de e-mail no painel do Supabase.)",
+    );
+  }
+}
 
-  return {
-    id: registro.id,
-    email: registro.email,
-    nome: registro.nome,
-    ambiente: registro.ambiente as Usuario["ambiente"],
-  };
+export async function autenticar(email: string, senha: string): Promise<void> {
+  if (!SUPABASE_CONFIGURADO) throw new ErroDeAutenticacao(SEM_PROJETO);
+
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password: senha,
+  });
+
+  if (error) {
+    // O Supabase já devolve mensagem única para e-mail inexistente e senha
+    // errada, que é o comportamento certo: não entregamos a um atacante a
+    // informação de quais e-mails têm conta.
+    throw new ErroDeAutenticacao(
+      error.message.includes("Invalid login credentials")
+        ? "E-mail ou senha incorretos."
+        : error.message,
+    );
+  }
+}
+
+export async function encerrarSessao(): Promise<void> {
+  if (!SUPABASE_CONFIGURADO) return;
+  const supabase = await supabaseServidor();
+  await supabase.auth.signOut();
 }
 
 // ---------------------------------------------------------------------------
 // Sessão
 // ---------------------------------------------------------------------------
 
-export async function criarSessao(usuarioId: number): Promise<void> {
-  const token = await new SignJWT({ uid: usuarioId })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(`${DURACAO_DIAS}d`)
-    .sign(segredo());
-
-  const jar = await cookies();
-  jar.set(COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: DURACAO_DIAS * 24 * 60 * 60,
-  });
-}
-
-export async function encerrarSessao(): Promise<void> {
-  const jar = await cookies();
-  jar.delete(COOKIE);
-}
-
 export async function usuarioAtual(): Promise<Usuario | null> {
-  const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
-  if (!token) return null;
+  if (!SUPABASE_CONFIGURADO) return null;
 
-  try {
-    const { payload } = await jwtVerify(token, segredo());
-    const uid = Number(payload.uid);
-    if (!Number.isInteger(uid)) return null;
+  const supabase = await supabaseServidor();
+  // getUser valida o token no servidor de autenticação. getSession leria só o
+  // cookie, que o navegador pode ter adulterado.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
 
-    const registro = db()
-      .prepare("SELECT id, email, nome, ambiente FROM usuarios WHERE id = ?")
-      .get(uid) as Usuario | undefined;
-    return registro ?? null;
-  } catch {
-    // Token expirado, adulterado ou assinado com outro segredo.
-    return null;
-  }
+  const { data: perfil } = await supabase
+    .from("perfis")
+    .select("nome, ambiente")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return {
+    id: user.id,
+    email: user.email ?? "",
+    // O perfil nasce por trigger no cadastro; o fallback cobre uma conta
+    // criada antes da migração do trigger.
+    nome: perfil?.nome || (user.user_metadata?.nome as string) || user.email?.split("@")[0] || "",
+    ambiente: (perfil?.ambiente as Usuario["ambiente"]) ?? "estudante",
+  };
 }
 
 /** Para páginas que só existem logado. Redireciona quando não há sessão. */
@@ -149,45 +141,62 @@ export async function exigirUsuario(): Promise<Usuario> {
 // Perfil do estudante
 // ---------------------------------------------------------------------------
 
-export function perfilDoEstudante(usuarioId: number): PerfilEstudante | null {
-  const registro = db()
-    .prepare(
-      "SELECT usuario_id, periodo, faculdade, objetivo, nivel FROM perfis_estudante WHERE usuario_id = ?",
-    )
-    .get(usuarioId) as PerfilEstudante | undefined;
-  return registro ?? null;
+export async function perfilDoEstudante(): Promise<PerfilEstudante | null> {
+  if (!SUPABASE_CONFIGURADO) return null;
+
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("perfis_estudante")
+    .select("usuario_id, periodo, faculdade, objetivo, nivel")
+    .maybeSingle();
+
+  return (data as PerfilEstudante | null) ?? null;
 }
 
-export function salvarPerfilDoEstudante(perfil: PerfilEstudante): void {
-  db()
-    .prepare(
-      `INSERT INTO perfis_estudante (usuario_id, periodo, faculdade, objetivo, nivel, atualizado_em)
-       VALUES (@usuario_id, @periodo, @faculdade, @objetivo, @nivel, datetime('now'))
-       ON CONFLICT(usuario_id) DO UPDATE SET
-         periodo = excluded.periodo,
-         faculdade = excluded.faculdade,
-         objetivo = excluded.objetivo,
-         nivel = excluded.nivel,
-         atualizado_em = datetime('now')`,
-    )
-    .run(perfil);
+export async function salvarPerfilDoEstudante(perfil: PerfilEstudante): Promise<void> {
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("perfis_estudante").upsert(
+    {
+      usuario_id: perfil.usuario_id,
+      periodo: perfil.periodo,
+      faculdade: perfil.faculdade,
+      objetivo: perfil.objetivo,
+      nivel: perfil.nivel,
+      atualizado_em: new Date().toISOString(),
+    },
+    { onConflict: "usuario_id" },
+  );
+  if (error) throw new Error(`Não consegui salvar seu perfil: ${error.message}`);
 }
 
-export function disciplinasMatriculadas(usuarioId: number): string[] {
-  const linhas = db()
-    .prepare("SELECT disciplina_slug FROM matriculas WHERE usuario_id = ? ORDER BY disciplina_slug")
-    .all(usuarioId) as Array<{ disciplina_slug: string }>;
-  return linhas.map((l) => l.disciplina_slug);
+export async function disciplinasMatriculadas(): Promise<string[]> {
+  if (!SUPABASE_CONFIGURADO) return [];
+
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("matriculas")
+    .select("disciplina_slug")
+    .order("disciplina_slug");
+
+  return (data ?? []).map((linha) => linha.disciplina_slug as string);
 }
 
-export function definirMatriculas(usuarioId: number, slugs: string[]): void {
-  const conexao = db();
-  const transacao = conexao.transaction((lista: string[]) => {
-    conexao.prepare("DELETE FROM matriculas WHERE usuario_id = ?").run(usuarioId);
-    const insere = conexao.prepare(
-      "INSERT OR IGNORE INTO matriculas (usuario_id, disciplina_slug) VALUES (?, ?)",
-    );
-    for (const slug of lista) insere.run(usuarioId, slug);
-  });
-  transacao(slugs);
+export async function definirMatriculas(usuarioId: string, slugs: string[]): Promise<void> {
+  const supabase = await supabaseServidor();
+
+  // Sem transação entre chamadas HTTP: apagamos e reinserimos. Uma falha no
+  // meio deixa o aluno sem grade, mas ele volta ao onboarding e refaz — pior
+  // seria manter disciplina que ele acabou de desmarcar.
+  const { error: erroAoLimpar } = await supabase
+    .from("matriculas")
+    .delete()
+    .eq("usuario_id", usuarioId);
+  if (erroAoLimpar) throw new Error(`Não consegui atualizar sua grade: ${erroAoLimpar.message}`);
+
+  if (slugs.length === 0) return;
+
+  const { error } = await supabase
+    .from("matriculas")
+    .insert(slugs.map((slug) => ({ usuario_id: usuarioId, disciplina_slug: slug })));
+  if (error) throw new Error(`Não consegui salvar sua grade: ${error.message}`);
 }

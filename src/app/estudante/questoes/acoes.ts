@@ -62,8 +62,8 @@ export async function corrigirSimuladoAction(
   simuladoId: number,
   respostas: number[],
 ): Promise<{ acertos: number; total: number } | { erro: string }> {
-  const usuario = await exigirUsuario();
-  const resultado = corrigirSimulado(simuladoId, usuario.id, respostas);
+  await exigirUsuario();
+  const resultado = await corrigirSimulado(simuladoId, respostas);
   if (!resultado) return { erro: "Simulado não encontrado." };
 
   // O desempenho alimenta painel e plano de estudos: ambos precisam refazer.

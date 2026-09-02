@@ -1,23 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import { disciplinasMatriculadas, exigirUsuario, perfilDoEstudante } from "@/lib/auth";
 import { disciplinasDoPeriodo } from "@/lib/curriculo";
 import { salvarOnboarding } from "./acoes";
 import { FormularioDeOnboarding } from "./FormularioDeOnboarding";
 
+/**
+ * Sempre dinâmica: esta rota depende da sessão.
+ *
+ * Sem isso o Next a pré-renderiza quando o build roda sem as variáveis do
+ * Supabase — porque aí a leitura de sessão nem chega a tocar nos cookies — e o
+ * resultado é uma página congelada em "deslogado" para todo mundo. A garantia
+ * não pode depender de a configuração estar presente na hora do build.
+ */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Montar sua grade" };
 
 export default async function PaginaOnboarding() {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id);
-  const matriculadas = disciplinasMatriculadas(usuario.id);
+  const perfil = await perfilDoEstudante();
+  const matriculadas = await disciplinasMatriculadas();
   const periodo = perfil?.periodo ?? 1;
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-12">
-      <Link href="/" className="mb-8 flex items-center gap-2">
-        <span className="text-lg">⚖️</span>
-        <span className="text-sm font-bold tracking-tight">Machine Brain</span>
+      <Link href="/" className="mb-8 inline-block">
+        <Logo />
       </Link>
 
       <h1 className="text-2xl font-bold tracking-tight">

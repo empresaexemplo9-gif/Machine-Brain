@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { buscarFontes, buscarFontePorId } from "@/lib/fontes";
 import type { Disciplina } from "@/lib/curriculo";
 import { gerarEstruturado } from "@/lib/ia/cliente";
@@ -22,7 +22,7 @@ export interface SimuladoArmazenado {
 }
 
 export async function gerarSimulado(opcoes: {
-  usuarioId: number;
+  usuarioId: string;
   disciplina: Disciplina;
   tema: string;
   estilo: string;
@@ -67,69 +67,56 @@ export async function gerarSimulado(opcoes: {
     fontes: q.fontes.filter((id) => Boolean(buscarFontePorId(id))),
   }));
 
-  const resultado = db()
-    .prepare(
-      `INSERT INTO simulados (usuario_id, disciplina_slug, estilo, dificuldade, tema, questoes_json, total)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      opcoes.usuarioId,
-      opcoes.disciplina.slug,
-      opcoes.estilo,
-      opcoes.dificuldade,
-      opcoes.tema,
-      JSON.stringify(questoes),
-      questoes.length,
-    );
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase
+    .from("simulados")
+    .insert({
+      usuario_id: opcoes.usuarioId,
+      disciplina_slug: opcoes.disciplina.slug,
+      estilo: opcoes.estilo,
+      dificuldade: opcoes.dificuldade,
+      tema: opcoes.tema,
+      questoes,
+      total: questoes.length,
+    })
+    .select("id")
+    .single();
 
-  return Number(resultado.lastInsertRowid);
+  if (error || !data) throw new Error(`Não consegui salvar o simulado: ${error?.message}`);
+  return data.id as number;
 }
 
-export function carregarSimulado(
-  id: number,
-  usuarioId: number,
-): SimuladoArmazenado | null {
-  const linha = db()
-    .prepare("SELECT * FROM simulados WHERE id = ? AND usuario_id = ?")
-    .get(id, usuarioId) as
-    | {
-        id: number;
-        disciplina_slug: string;
-        estilo: string;
-        dificuldade: string;
-        tema: string;
-        questoes_json: string;
-        respostas_json: string | null;
-        acertos: number | null;
-        total: number;
-        finalizado_em: string | null;
-        criado_em: string;
-      }
-    | undefined;
+export async function carregarSimulado(id: number): Promise<SimuladoArmazenado | null> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("simulados")
+    .select(
+      "id, disciplina_slug, estilo, dificuldade, tema, questoes, respostas, acertos, total, finalizado_em, criado_em",
+    )
+    .eq("id", id)
+    .maybeSingle();
 
-  if (!linha) return null;
-
+  if (!data) return null;
   return {
-    id: linha.id,
-    disciplina_slug: linha.disciplina_slug,
-    estilo: linha.estilo,
-    dificuldade: linha.dificuldade,
-    tema: linha.tema,
-    questoes: JSON.parse(linha.questoes_json) as Questao[],
-    respostas: linha.respostas_json ? (JSON.parse(linha.respostas_json) as number[]) : null,
-    acertos: linha.acertos,
-    total: linha.total,
-    finalizado_em: linha.finalizado_em,
-    criado_em: linha.criado_em,
+    id: data.id as number,
+    disciplina_slug: data.disciplina_slug as string,
+    estilo: data.estilo as string,
+    dificuldade: data.dificuldade as string,
+    tema: data.tema as string,
+    questoes: data.questoes as Questao[],
+    respostas: (data.respostas as number[] | null) ?? null,
+    acertos: (data.acertos as number | null) ?? null,
+    total: data.total as number,
+    finalizado_em: (data.finalizado_em as string | null) ?? null,
+    criado_em: data.criado_em as string,
   };
 }
 
-export function corrigirSimulado(
+export async function corrigirSimulado(
   id: number,
-  usuarioId: number,
   respostas: number[],
-): { acertos: number; total: number } | null {
-  const simulado = carregarSimulado(id, usuarioId);
+): Promise<{ acertos: number; total: number } | null> {
+  const simulado = await carregarSimulado(id);
   if (!simulado) return null;
 
   const acertos = simulado.questoes.reduce(
@@ -137,24 +124,25 @@ export function corrigirSimulado(
     0,
   );
 
-  db()
-    .prepare(
-      `UPDATE simulados
-          SET respostas_json = ?, acertos = ?, finalizado_em = datetime('now')
-        WHERE id = ? AND usuario_id = ?`,
-    )
-    .run(JSON.stringify(respostas), acertos, id, usuarioId);
+  const supabase = await supabaseServidor();
+  const { error } = await supabase
+    .from("simulados")
+    .update({ respostas, acertos, finalizado_em: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(`Não consegui gravar a correção: ${error.message}`);
 
   return { acertos, total: simulado.questoes.length };
 }
 
-export function simuladosRecentes(usuarioId: number, limite = 10) {
-  return db()
-    .prepare(
-      `SELECT id, disciplina_slug, estilo, dificuldade, tema, acertos, total, finalizado_em, criado_em
-         FROM simulados WHERE usuario_id = ? ORDER BY id DESC LIMIT ?`,
-    )
-    .all(usuarioId, limite) as Array<{
+export async function simuladosRecentes(limite = 10) {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("simulados")
+    .select("id, disciplina_slug, estilo, dificuldade, tema, acertos, total, finalizado_em, criado_em")
+    .order("id", { ascending: false })
+    .limit(limite);
+
+  return (data ?? []) as Array<{
     id: number;
     disciplina_slug: string;
     estilo: string;

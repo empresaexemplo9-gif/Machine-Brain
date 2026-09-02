@@ -1,0 +1,70 @@
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Um push novo no mesmo PR cancela a execução anterior: o resultado dela já não
+# vale para o código que está lá.
+concurrency:
+  group: verificacao-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, catálogo, RLS e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Publicadas no job para que os passos possam testá-las com env.*, que é o
+    # caminho suportado — o contexto secrets não é legível dentro de um `if`.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL_DEV }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_DEV }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      # Falha se alguma fonte jurídica entrar sem texto literal, URL oficial ou
+      # data de conferência — ou se ficar inalcançável pela busca do assunto.
+      - name: Catálogo jurídico
+        run: npm run verificar:catalogo
+
+      - name: Garantir servidor Postgres
+        run: |
+          if ! ls -d /usr/lib/postgresql/*/bin >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends postgresql
+          fi
+
+      # Sobe um Postgres descartável, aplica as migrações e prova que nenhum
+      # usuário alcança a linha de outro.
+      - name: Políticas de RLS
+        run: npm run verificar:rls
+
+      - name: Build de produção
+        run: npm run build
+
+      # O percurso em navegador precisa de um projeto Supabase e CRIA CONTAS
+      # nele. Sem os secrets configurados o passo se pula sozinho com aviso, em
+      # vez de falhar; basta apontar SUPABASE_URL_DEV e SUPABASE_ANON_KEY_DEV
+      # para um projeto de DESENVOLVIMENTO para o percurso completo passar a
+      # rodar a cada PR.
+      - name: Instalar Chromium
+        if: env.NEXT_PUBLIC_SUPABASE_URL != ''
+        run: npx playwright install --with-deps chromium
+
+      - name: Fluxos de ponta a ponta
+        run: npm run verificar:fluxos

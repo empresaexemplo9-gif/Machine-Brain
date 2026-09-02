@@ -1,0 +1,12 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect x="0" y="0" width="64" height="64" fill="#fff"/>
+      <path d="M 12 66 L 31.5 -2 H 38.5 L 19 66 Z" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#0a0e13"/>
+  <g transform="translate(9 4) scale(0.72)">
+    <path d="M 4 3 H 30 A 29 29.5 0 0 1 30 61 H 4 Z" fill="#e8eef4" mask="url(#c)"/>
+  </g>
+</svg>

@@ -22,17 +22,17 @@ export default async function PaginaProfessor({
   searchParams: Promise<{ disciplina?: string; pergunta?: string; conversa?: string }>;
 }) {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id)!;
+  const perfil = (await perfilDoEstudante())!;
   const params = await searchParams;
 
   const disciplina = params.disciplina ? disciplinaPorSlug(params.disciplina) : undefined;
-  const conversas = conversasDoUsuario(usuario.id, "estudante", 15);
+  const conversas = await conversasDoUsuario("estudante", 15);
 
   // Uma conversa só é reaberta depois de confirmar que ela é deste usuário.
   const conversaId = params.conversa ? Number(params.conversa) : null;
   const conversaValida =
-    conversaId !== null && Number.isInteger(conversaId) && conversaPertenceAo(conversaId, usuario.id);
-  const mensagens = conversaValida ? mensagensDaConversa(conversaId!) : [];
+    conversaId !== null && Number.isInteger(conversaId) && (await conversaPertenceAo(conversaId));
+  const mensagens = conversaValida ? await mensagensDaConversa(conversaId!) : [];
 
   return (
     <div className="grid gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">

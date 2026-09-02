@@ -30,7 +30,7 @@ export async function enviarDocumentoAction(
   let id: number;
   try {
     const { texto, tipo } = await extrairTexto(arquivo);
-    id = salvarDocumento({
+    id = await salvarDocumento({
       usuarioId: usuario.id,
       nomeArquivo: arquivo.name,
       tipo,
@@ -48,9 +48,9 @@ export async function enviarDocumentoAction(
 export async function analisarDocumentoAction(
   documentoId: number,
 ): Promise<{ erro?: string }> {
-  const usuario = await exigirUsuario();
+  await exigirUsuario();
   try {
-    await analisarDocumento(documentoId, usuario.id);
+    await analisarDocumento(documentoId);
   } catch (erro) {
     if (erro instanceof ErroDeGeracao || erro instanceof ErroDeUpload) {
       return { erro: erro.message };

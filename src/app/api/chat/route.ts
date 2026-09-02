@@ -48,13 +48,15 @@ export async function POST(requisicao: Request) {
   }
   const entrada = corpo.data;
 
-  // Conversa: ou é uma existente que pertence a este usuário, ou é nova.
+  // Conversa: ou é uma existente que pertence a este usuário, ou é nova. O RLS
+  // já barraria a conversa alheia; esta checagem existe para devolver 404 em vez
+  // de uma conversa vazia.
   let conversaId = entrada.conversaId ?? null;
-  if (conversaId !== null && !conversaPertenceAo(conversaId, usuario.id)) {
+  if (conversaId !== null && !(await conversaPertenceAo(conversaId))) {
     return NextResponse.json({ erro: "Conversa não encontrada." }, { status: 404 });
   }
   if (conversaId === null) {
-    conversaId = criarConversa({
+    conversaId = await criarConversa({
       usuarioId: usuario.id,
       ambiente: entrada.ambiente,
       disciplinaSlug: entrada.disciplinaSlug ?? null,
@@ -83,7 +85,7 @@ export async function POST(requisicao: Request) {
 
   let sistema: string;
   if (entrada.ambiente === "estudante") {
-    const perfil = perfilDoEstudante(usuario.id);
+    const perfil = await perfilDoEstudante();
     const nivelBruto = entrada.nivel ?? perfil?.nivel ?? "estudante";
     sistema = promptDoProfessor({
       nomeAluno: usuario.nome,
@@ -95,7 +97,7 @@ export async function POST(requisicao: Request) {
     });
   } else {
     const documento = entrada.documentoId
-      ? carregarDocumento(entrada.documentoId, usuario.id)
+      ? await carregarDocumento(entrada.documentoId)
       : null;
     sistema = promptDoJurista({
       nomeUsuario: usuario.nome,
@@ -106,9 +108,10 @@ export async function POST(requisicao: Request) {
     });
   }
 
-  const historico = historicoParaModelo(conversaId);
-  registrarMensagem({
+  const historico = await historicoParaModelo(conversaId);
+  await registrarMensagem({
     conversaId,
+    usuarioId: usuario.id,
     papel: "user",
     conteudo: entrada.mensagem,
     nivel: entrada.nivel ?? null,
@@ -133,8 +136,9 @@ export async function POST(requisicao: Request) {
         }
 
         const auditoria = auditarCitacoes(completa, fontesFinais);
-        registrarMensagem({
+        await registrarMensagem({
           conversaId: idDaConversa,
+          usuarioId: usuario.id,
           papel: "assistant",
           conteudo: completa,
           nivel: entrada.nivel ?? null,
@@ -153,8 +157,9 @@ export async function POST(requisicao: Request) {
           erro instanceof Error ? erro.message : "Falha inesperada ao consultar o modelo.";
         // O que já foi gerado não se perde: fica registrado com a marca do erro.
         if (completa) {
-          registrarMensagem({
+          await registrarMensagem({
             conversaId: idDaConversa,
+            usuarioId: usuario.id,
             papel: "assistant",
             conteudo: `${completa}\n\n_(resposta interrompida: ${mensagem})_`,
             auditoria: auditarCitacoes(completa, fontesFinais),

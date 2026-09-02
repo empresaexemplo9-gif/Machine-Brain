@@ -2,7 +2,7 @@
   "name": "machine-brain",
   "version": "0.1.0",
   "private": true,
-  "description": "Plataforma que acompanha o usuario do primeiro periodo de Direito ate a advocacia.",
+  "description": "DRAP EDUCA — plataforma que acompanha o usuário do primeiro período de Direito até a advocacia.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,13 +12,13 @@
     "seed": "node --experimental-strip-types scripts/seed.ts",
     "verificar:catalogo": "tsc scripts/verificar-catalogo.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-catalogo.js",
     "verificar:fluxos": "node scripts/verificar-fluxos.mjs",
-    "verificar": "npm run typecheck && npm run verificar:catalogo && npm run build && npm run verificar:fluxos"
+    "verificar": "npm run typecheck && npm run verificar:catalogo && npm run verificar:rls && npm run build && npm run verificar:fluxos",
+    "verificar:rls": "bash scripts/verificar-rls.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
-    "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.3",
-    "jose": "^6.2.10",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.113.0",
     "mammoth": "^1.12.2",
     "next": "^16.3.4",
     "react": "^19.2.8",
@@ -29,7 +29,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

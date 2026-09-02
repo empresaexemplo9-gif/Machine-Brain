@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Roteiro de atuação" };
 
 export default async function PaginaRoteiro() {
   const usuario = await exigirUsuario();
-  const roteiros = roteirosDoUsuario(usuario.id, 20);
+  const roteiros = await roteirosDoUsuario(20);
 
   return (
     <div className="space-y-10">

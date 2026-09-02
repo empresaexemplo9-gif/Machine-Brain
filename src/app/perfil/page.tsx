@@ -6,12 +6,22 @@ import { MODO_DEMONSTRACAO } from "@/lib/ia/cliente";
 import { CATALOGO } from "@/lib/fontes";
 import { Cabecalho } from "@/components/Cabecalho";
 
+/**
+ * Sempre dinâmica: esta rota depende da sessão.
+ *
+ * Sem isso o Next a pré-renderiza quando o build roda sem as variáveis do
+ * Supabase — porque aí a leitura de sessão nem chega a tocar nos cookies — e o
+ * resultado é uma página congelada em "deslogado" para todo mundo. A garantia
+ * não pode depender de a configuração estar presente na hora do build.
+ */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Perfil" };
 
 export default async function PaginaDePerfil() {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id);
-  const disciplinas = disciplinasMatriculadas(usuario.id)
+  const perfil = await perfilDoEstudante();
+  const disciplinas = (await disciplinasMatriculadas())
     .map(disciplinaPorSlug)
     .filter((d) => d !== undefined);
   const nivel = NIVEIS_EXPLICACAO.find((n) => n.id === perfil?.nivel);

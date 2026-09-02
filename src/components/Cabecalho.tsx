@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "./Logo";
 import { sair } from "@/app/acoes-sessao";
 import type { Usuario } from "@/lib/auth";
 
@@ -38,9 +39,8 @@ export function Cabecalho({
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-borda)] bg-[var(--color-fundo)]/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
-        <Link href={`/${ambiente}`} className="flex shrink-0 items-center gap-2">
-          <span className="text-lg leading-none">⚖️</span>
-          <span className="text-sm font-bold tracking-tight">Machine Brain</span>
+        <Link href={`/${ambiente}`} className="shrink-0">
+          <Logo />
         </Link>
 
         <nav className="hidden flex-1 items-center gap-1 md:flex">

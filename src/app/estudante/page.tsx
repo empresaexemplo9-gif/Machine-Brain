@@ -11,13 +11,16 @@ export const metadata: Metadata = { title: "Painel do estudante" };
 
 export default async function PainelEstudante() {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id)!;
-  const slugs = disciplinasMatriculadas(usuario.id);
+  // O layout já garantiu que o perfil existe antes de renderizar esta página.
+  const perfil = (await perfilDoEstudante())!;
+  const [slugs, desempenho, recentes, plano] = await Promise.all([
+    disciplinasMatriculadas(),
+    desempenhoDoAluno(),
+    simuladosRecentes(5),
+    planoMaisRecente(),
+  ]);
   const disciplinas = slugs.map(disciplinaPorSlug).filter((d) => d !== undefined);
-  const desempenho = desempenhoDoAluno(usuario.id);
   const fraco = pontoMaisFraco(desempenho);
-  const recentes = simuladosRecentes(usuario.id, 5);
-  const plano = planoMaisRecente(usuario.id);
 
   return (
     <div className="space-y-10">

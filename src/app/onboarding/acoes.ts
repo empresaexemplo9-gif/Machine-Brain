@@ -41,14 +41,14 @@ export async function salvarOnboarding(
     return { erro: "Selecione ao menos uma disciplina para montar sua grade." };
   }
 
-  salvarPerfilDoEstudante({
+  await salvarPerfilDoEstudante({
     usuario_id: usuario.id,
     periodo: validado.data.periodo,
     faculdade: validado.data.faculdade,
     objetivo: validado.data.objetivo,
     nivel: validado.data.nivel,
   });
-  definirMatriculas(usuario.id, slugs);
+  await definirMatriculas(usuario.id, slugs);
 
   redirect("/estudante");
 }

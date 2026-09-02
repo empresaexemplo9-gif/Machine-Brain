@@ -11,7 +11,7 @@ export interface EstadoPlano {
 
 export async function gerarPlanoAction(): Promise<EstadoPlano> {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id);
+  const perfil = await perfilDoEstudante();
   if (!perfil) return { erro: "Complete seu perfil antes de gerar o plano." };
 
   try {

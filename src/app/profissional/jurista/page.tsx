@@ -30,16 +30,16 @@ export default async function PaginaJurista({
 
   const conversaId = params.conversa ? Number(params.conversa) : null;
   const conversaValida =
-    conversaId !== null && Number.isInteger(conversaId) && conversaPertenceAo(conversaId, usuario.id);
-  const mensagens = conversaValida ? mensagensDaConversa(conversaId!) : [];
+    conversaId !== null && Number.isInteger(conversaId) && (await conversaPertenceAo(conversaId));
+  const mensagens = conversaValida ? await mensagensDaConversa(conversaId!) : [];
 
   const documentoId = params.documento ? Number(params.documento) : null;
   const documento =
     documentoId !== null && Number.isInteger(documentoId)
-      ? carregarDocumento(documentoId, usuario.id)
+      ? await carregarDocumento(documentoId)
       : null;
 
-  const conversas = conversasDoUsuario(usuario.id, "profissional", 15);
+  const conversas = await conversasDoUsuario("profissional", 15);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { buscarFontes, buscarFontePorId } from "@/lib/fontes";
 import { gerarEstruturado } from "@/lib/ia/cliente";
 import { promptRoteiroDeAtuacao } from "@/lib/ia/prompts";
@@ -17,7 +17,7 @@ export const ETAPAS_DO_METODO = [
   "Estruturar estratégias",
 ] as const;
 
-export async function gerarRoteiro(usuarioId: number, caso: string): Promise<number> {
+export async function gerarRoteiro(usuarioId: string, caso: string): Promise<number> {
   const fontes = buscarFontes(caso, { limite: 8 });
 
   const roteiro = await gerarEstruturado({
@@ -42,33 +42,43 @@ export async function gerarRoteiro(usuarioId: number, caso: string): Promise<num
       .sort((a, b) => a.numero - b.numero),
   };
 
-  const resultado = db()
-    .prepare("INSERT INTO roteiros (usuario_id, caso, etapas_json) VALUES (?, ?, ?)")
-    .run(usuarioId, caso, JSON.stringify(limpo));
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase
+    .from("roteiros")
+    .insert({ usuario_id: usuarioId, caso, roteiro: limpo })
+    .select("id")
+    .single();
 
-  return Number(resultado.lastInsertRowid);
+  if (error || !data) throw new Error(`Não consegui salvar o roteiro: ${error?.message}`);
+  return data.id as number;
 }
 
-export function carregarRoteiro(
+export async function carregarRoteiro(
   id: number,
-  usuarioId: number,
-): { id: number; caso: string; roteiro: Roteiro; criado_em: string } | null {
-  const linha = db()
-    .prepare("SELECT id, caso, etapas_json, criado_em FROM roteiros WHERE id = ? AND usuario_id = ?")
-    .get(id, usuarioId) as
-    | { id: number; caso: string; etapas_json: string; criado_em: string }
-    | undefined;
-  if (!linha) return null;
+): Promise<{ id: number; caso: string; roteiro: Roteiro; criado_em: string } | null> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("roteiros")
+    .select("id, caso, roteiro, criado_em")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!data) return null;
   return {
-    id: linha.id,
-    caso: linha.caso,
-    roteiro: JSON.parse(linha.etapas_json) as Roteiro,
-    criado_em: linha.criado_em,
+    id: data.id as number,
+    caso: data.caso as string,
+    roteiro: data.roteiro as Roteiro,
+    criado_em: data.criado_em as string,
   };
 }
 
-export function roteirosDoUsuario(usuarioId: number, limite = 20) {
-  return db()
-    .prepare("SELECT id, caso, criado_em FROM roteiros WHERE usuario_id = ? ORDER BY id DESC LIMIT ?")
-    .all(usuarioId, limite) as Array<{ id: number; caso: string; criado_em: string }>;
+export async function roteirosDoUsuario(limite = 20) {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("roteiros")
+    .select("id, caso, criado_em")
+    .order("id", { ascending: false })
+    .limit(limite);
+
+  return (data ?? []) as Array<{ id: number; caso: string; criado_em: string }>;
 }

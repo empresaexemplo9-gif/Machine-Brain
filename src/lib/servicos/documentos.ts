@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { buscarFontes, buscarFontePorId } from "@/lib/fontes";
 import { gerarEstruturado } from "@/lib/ia/cliente";
 import { promptAnaliseDeDocumento } from "@/lib/ia/prompts";
@@ -54,32 +54,31 @@ export async function extrairTexto(arquivo: File): Promise<{ texto: string; tipo
   throw new ErroDeUpload("Formato não suportado. Envie PDF, DOCX, TXT ou MD.");
 }
 
-export function salvarDocumento(opcoes: {
-  usuarioId: number;
+export async function salvarDocumento(opcoes: {
+  usuarioId: string;
   nomeArquivo: string;
   tipo: string;
   texto: string;
-}): number {
-  const resultado = db()
-    .prepare(
-      `INSERT INTO documentos (usuario_id, nome_arquivo, tipo, caracteres, texto)
-       VALUES (?, ?, ?, ?, ?)`,
-    )
-    .run(
-      opcoes.usuarioId,
-      opcoes.nomeArquivo,
-      opcoes.tipo,
-      opcoes.texto.length,
-      opcoes.texto.slice(0, LIMITE_CARACTERES),
-    );
-  return Number(resultado.lastInsertRowid);
+}): Promise<number> {
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase
+    .from("documentos")
+    .insert({
+      usuario_id: opcoes.usuarioId,
+      nome_arquivo: opcoes.nomeArquivo,
+      tipo: opcoes.tipo,
+      caracteres: opcoes.texto.length,
+      texto: opcoes.texto.slice(0, LIMITE_CARACTERES),
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) throw new ErroDeUpload(`Não consegui salvar o documento: ${error?.message}`);
+  return data.id as number;
 }
 
-export async function analisarDocumento(
-  id: number,
-  usuarioId: number,
-): Promise<AnaliseDeDocumento> {
-  const documento = carregarDocumento(id, usuarioId);
+export async function analisarDocumento(id: number): Promise<AnaliseDeDocumento> {
+  const documento = await carregarDocumento(id);
   if (!documento) throw new ErroDeUpload("Documento não encontrado.");
 
   // O começo do documento concentra qualificação das partes, objeto e pedidos —
@@ -106,9 +105,9 @@ export async function analisarDocumento(
     fontes: analise.fontes.filter((fid) => Boolean(buscarFontePorId(fid))),
   };
 
-  db()
-    .prepare("UPDATE documentos SET analise_json = ? WHERE id = ? AND usuario_id = ?")
-    .run(JSON.stringify(limpa), id, usuarioId);
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("documentos").update({ analise: limpa }).eq("id", id);
+  if (error) throw new ErroDeUpload(`Não consegui salvar a análise: ${error.message}`);
 
   return limpa;
 }
@@ -123,48 +122,40 @@ export interface DocumentoArmazenado {
   criado_em: string;
 }
 
-export function carregarDocumento(id: number, usuarioId: number): DocumentoArmazenado | null {
-  const linha = db()
-    .prepare(
-      "SELECT id, nome_arquivo, tipo, caracteres, texto, analise_json, criado_em FROM documentos WHERE id = ? AND usuario_id = ?",
-    )
-    .get(id, usuarioId) as
-    | {
-        id: number;
-        nome_arquivo: string;
-        tipo: string;
-        caracteres: number;
-        texto: string;
-        analise_json: string | null;
-        criado_em: string;
-      }
-    | undefined;
+export async function carregarDocumento(id: number): Promise<DocumentoArmazenado | null> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("documentos")
+    .select("id, nome_arquivo, tipo, caracteres, texto, analise, criado_em")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (!linha) return null;
+  if (!data) return null;
   return {
-    id: linha.id,
-    nome_arquivo: linha.nome_arquivo,
-    tipo: linha.tipo,
-    caracteres: linha.caracteres,
-    texto: linha.texto,
-    analise: linha.analise_json ? (JSON.parse(linha.analise_json) as AnaliseDeDocumento) : null,
-    criado_em: linha.criado_em,
+    id: data.id as number,
+    nome_arquivo: data.nome_arquivo as string,
+    tipo: data.tipo as string,
+    caracteres: data.caracteres as number,
+    texto: data.texto as string,
+    analise: (data.analise as AnaliseDeDocumento | null) ?? null,
+    criado_em: data.criado_em as string,
   };
 }
 
-export function documentosDoUsuario(usuarioId: number, limite = 20) {
-  return db()
-    .prepare(
-      `SELECT id, nome_arquivo, tipo, caracteres, criado_em,
-              CASE WHEN analise_json IS NULL THEN 0 ELSE 1 END AS analisado
-         FROM documentos WHERE usuario_id = ? ORDER BY id DESC LIMIT ?`,
-    )
-    .all(usuarioId, limite) as Array<{
-    id: number;
-    nome_arquivo: string;
-    tipo: string;
-    caracteres: number;
-    criado_em: string;
-    analisado: number;
-  }>;
+export async function documentosDoUsuario(limite = 20) {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("documentos")
+    .select("id, nome_arquivo, tipo, caracteres, criado_em, analise")
+    .order("id", { ascending: false })
+    .limit(limite);
+
+  return (data ?? []).map((l) => ({
+    id: l.id as number,
+    nome_arquivo: l.nome_arquivo as string,
+    tipo: l.tipo as string,
+    caracteres: l.caracteres as number,
+    criado_em: l.criado_em as string,
+    analisado: l.analise !== null,
+  }));
 }
