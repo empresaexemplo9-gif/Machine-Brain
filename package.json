@@ -12,7 +12,7 @@
     "verificar:fluxos": "node scripts/verificar-fluxos.mjs",
     "verificar": "npm run typecheck && npm run verificar:catalogo && npm run verificar:rls && npm run build && npm run verificar:fluxos",
     "verificar:rls": "bash scripts/verificar-rls.sh",
-    "verificar:conexao": "node scripts/verificar-conexao.mjs"
+    "verificar:conexao": "tsc scripts/verificar-conexao.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-conexao.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

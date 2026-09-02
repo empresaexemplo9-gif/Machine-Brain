@@ -35,6 +35,12 @@ export function AvisoDeConfiguracao() {
         alterá-las sem um novo build (ou um <em>redeploy</em>) não muda nada. O passo a passo está
         no README.
       </p>
+      <p className="mt-2 text-xs text-[var(--color-texto-suave)]">
+        <a href="/diagnostico" className="font-semibold text-[var(--color-ambar)] hover:underline">
+          Ver o diagnóstico deste deploy →
+        </a>{" "}
+        diz qual dos passos falta, em vez de deixar você adivinhar.
+      </p>
     </div>
   );
 }
