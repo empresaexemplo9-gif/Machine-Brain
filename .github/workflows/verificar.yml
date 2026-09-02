@@ -62,6 +62,12 @@ jobs:
       # vez de falhar; basta apontar SUPABASE_URL_DEV e SUPABASE_ANON_KEY_DEV
       # para um projeto de DESENVOLVIMENTO para o percurso completo passar a
       # rodar a cada PR.
+      # Roda antes do percurso porque a falha aqui é muito mais legível: diz se
+      # é variável errada, migração não aplicada ou acesso anônimo aberto.
+      - name: Conexão com o Supabase
+        if: env.NEXT_PUBLIC_SUPABASE_URL != ''
+        run: npm run verificar:conexao
+
       - name: Instalar Chromium
         if: env.NEXT_PUBLIC_SUPABASE_URL != ''
         run: npx playwright install --with-deps chromium

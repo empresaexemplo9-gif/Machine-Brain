@@ -58,6 +58,12 @@ aplique a migração:
 Em **Authentication → Providers → Email**, desative *Confirm email* se quiser
 que o cadastro já entre com sessão (recomendado em desenvolvimento).
 
+Depois de preencher o `.env.local`, confira tudo de uma vez:
+
+```bash
+npm run verificar:conexao
+```
+
 ### 2. Rodar a aplicação
 
 ```bash
@@ -82,6 +88,7 @@ falhar com erro de conexão.
 npm run typecheck            # tsc --noEmit
 npm run verificar:catalogo   # integridade e alcançabilidade das fontes jurídicas
 npm run verificar:rls        # prova as políticas de RLS contra um Postgres real
+npm run verificar:conexao    # diagnostica o projeto Supabase configurado
 npm run build                # build de produção
 npm run verificar:fluxos     # 25 checagens de ponta a ponta em navegador real
 npm run verificar            # tudo acima, em ordem
@@ -94,6 +101,13 @@ lê, insere, altera nem apaga a linha de outro — por nenhum caminho. Também f
 se alguma tabela nova entrar sem RLS ou sem política. Não precisa de rede nem de
 projeto Supabase.
 
+**`verificar:conexao`** é o primeiro comando a rodar depois de criar o projeto.
+Ele responde, em ordem, o que costuma dar errado: as variáveis estão certas (e
+não é a `service_role` por engano), o projeto responde, a migração foi aplicada,
+e — o que mais importa — uma consulta **sem sessão** é recusada. Se alguma tabela
+devolver dado sem sessão, ele falha alto: seria qualquer pessoa com a chave
+pública lendo o banco.
+
 **`verificar:fluxos`** percorre o caminho do usuário num Chromium de verdade.
 Precisa de um projeto Supabase e **cria contas nele** — aponte para um projeto de
 desenvolvimento. Sem as variáveis definidas, o passo se pula com aviso. Roda
@@ -102,9 +116,10 @@ avisa em vez de inventar. Se os navegadores do Playwright não estiverem
 instalados, rode antes `npx playwright install chromium`.
 
 O CI em [`.github/workflows/verificar.yml`](.github/workflows/verificar.yml) roda
-tipos, catálogo, RLS e build a cada push e PR. O percurso em navegador entra
-automaticamente assim que os secrets `SUPABASE_URL_DEV` e `SUPABASE_ANON_KEY_DEV`
-existirem no repositório.
+tipos, catálogo, RLS e build a cada push e PR. O diagnóstico de conexão e o
+percurso em navegador entram automaticamente assim que os secrets
+`SUPABASE_URL_DEV` e `SUPABASE_ANON_KEY_DEV` existirem no repositório — aponte-os
+para um projeto de **desenvolvimento**, porque o percurso cria contas.
 
 ## Estrutura
 
