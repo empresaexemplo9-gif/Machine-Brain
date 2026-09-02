@@ -1,0 +1,42 @@
+From 433ae4504a7294737f49e81f8de0368b616fc549 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 2 Sep 2026 14:05:09 +0000
+Subject: [PATCH] Documentar NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY no
+ .env.example
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+O config.ts já lê NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY antes de cair no
+NEXT_PUBLIC_SUPABASE_ANON_KEY, mas o .env.example só citava a segunda.
+Projetos Supabase criados no painel novo entregam a chave publicável
+(sb_publishable_...) e não a anon em JWT, então quem segue o exemplo não
+encontra onde colar o que o painel mostrou.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01GAqqrg3N3pEyu1zs8HgpWm
+---
+ .env.example | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/.env.example b/.env.example
+index 7848f5c..f2f36e2 100644
+--- a/.env.example
++++ b/.env.example
+@@ -12,7 +12,13 @@
+ #
+ # Atenção: variáveis NEXT_PUBLIC_ entram no bundle na hora do build. Depois de
+ # alterá-las, refaça o build.
++#
++# O painel novo (Project Settings -> API Keys) entrega uma chave publicavel no
++# formato sb_publishable_...; projetos mais antigos ainda mostram a chave anon
++# em JWT (eyJ...), na aba Legacy API keys. A aplicacao aceita as duas: preencha
++# a variavel correspondente e deixe a outra vazia.
+ NEXT_PUBLIC_SUPABASE_URL=
++NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+ NEXT_PUBLIC_SUPABASE_ANON_KEY=
+ 
+ # --- Modelo -----------------------------------------------------------------
+-- 
+2.43.0
+
