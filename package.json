@@ -1,0 +1,40 @@
+{
+  "name": "machine-brain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma que acompanha o usuario do primeiro periodo de Direito ate a advocacia.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "seed": "node --experimental-strip-types scripts/seed.ts",
+    "verificar:catalogo": "tsc scripts/verificar-catalogo.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-catalogo.js",
+    "verificar:fluxos": "node scripts/verificar-fluxos.mjs",
+    "verificar": "npm run typecheck && npm run verificar:catalogo && npm run build && npm run verificar:fluxos"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "jose": "^6.2.10",
+    "mammoth": "^1.12.2",
+    "next": "^16.3.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "server-only": "^0.0.1",
+    "unpdf": "^1.8.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "playwright": "1.56.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.3"
+  }
+}
