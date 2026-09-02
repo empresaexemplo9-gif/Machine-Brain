@@ -4,7 +4,7 @@ import { exigirUsuario, perfilDoEstudante } from "@/lib/auth";
 import { disciplinaPorSlug } from "@/lib/curriculo";
 import { Chat } from "@/components/Chat";
 import { conversasDoUsuario, mensagensDaConversa, conversaPertenceAo } from "@/lib/servicos/conversas";
-import { MODO_DEMONSTRACAO } from "@/lib/ia/cliente";
+import { MODO_DEMONSTRACAO, modosDisponiveis } from "@/lib/ia/cliente";
 import { AvisoDeDemonstracao } from "@/components/AvisoDeDemonstracao";
 
 export const metadata: Metadata = { title: "Professor IA" };
@@ -99,6 +99,7 @@ export default async function PaginaProfessor({
         {MODO_DEMONSTRACAO && <AvisoDeDemonstracao />}
 
         <Chat
+          modos={modosDisponiveis()}
           key={conversaValida ? `c${conversaId}` : `n${params.disciplina ?? "geral"}`}
           ambiente="estudante"
           disciplinaSlug={disciplina?.slug ?? null}

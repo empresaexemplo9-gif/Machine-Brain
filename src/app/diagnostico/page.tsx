@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { diagnosticar, type Estado } from "@/lib/supabase/diagnostico";
+import { estadoDosModos } from "@/lib/ia/provedores";
+import { descreverModo } from "@/lib/ia/modos";
 
 /**
  * Página de diagnóstico da configuração do deploy.
@@ -45,6 +47,8 @@ const SIMBOLO: Record<Estado, string> = { ok: "✓", aviso: "!", falha: "✗" };
 export default async function PaginaDeDiagnostico() {
   const { checagens, estado, resumo, passos } = await diagnosticar();
   const cor = CORES[estado];
+  const modos = estadoDosModos();
+  const ligados = modos.filter((m) => m.disponivel).length;
 
   return (
     <main className="pagina space-y-6 py-10">
@@ -81,6 +85,52 @@ export default async function PaginaDeDiagnostico() {
                     {c.detalhe}
                   </span>
                 ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="cartao">
+        <h2 className="titulo-secao">Modos de IA</h2>
+        <p className="mt-1.5 text-xs text-[var(--color-texto-suave)]">
+          {ligados === 0
+            ? "Nenhum configurado — a plataforma responde em modo demonstração, sem inventar."
+            : `${ligados} de ${modos.length} configurados. O seletor no chat mostra só os ligados.`}
+        </p>
+        <ul className="mt-3 space-y-2.5">
+          {modos.map((m) => (
+            <li key={m.id} className="flex gap-2.5 text-sm">
+              <span
+                className={`shrink-0 font-bold ${
+                  m.disponivel ? CORES.ok.marca : CORES.aviso.marca
+                }`}
+              >
+                {m.disponivel ? SIMBOLO.ok : SIMBOLO.aviso}
+              </span>
+              <span className="min-w-0">
+                <span className="break-words">
+                  {m.rotulo} — {m.provedor}
+                </span>
+                <span className="block break-words text-xs text-[var(--color-texto-suave)]">
+                  {m.disponivel ? (
+                    <>
+                      {m.variavelChave} presente · modelo {m.modelo}
+                    </>
+                  ) : (
+                    <>
+                      {m.variavelChave} ausente ·{" "}
+                      <a
+                        href={descreverModo(m.id).ondePegar}
+                        className="underline"
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        pegar a chave
+                      </a>
+                    </>
+                  )}
+                </span>
               </span>
             </li>
           ))}

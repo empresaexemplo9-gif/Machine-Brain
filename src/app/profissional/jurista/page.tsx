@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { exigirUsuario } from "@/lib/auth";
 import { Chat } from "@/components/Chat";
-import { MODO_DEMONSTRACAO } from "@/lib/ia/cliente";
+import { MODO_DEMONSTRACAO, modosDisponiveis } from "@/lib/ia/cliente";
 import { AvisoDeDemonstracao } from "@/components/AvisoDeDemonstracao";
 import { carregarDocumento } from "@/lib/servicos/documentos";
 import {
@@ -103,6 +103,7 @@ export default async function PaginaJurista({
         {MODO_DEMONSTRACAO && <AvisoDeDemonstracao />}
 
         <Chat
+          modos={modosDisponiveis()}
           key={conversaValida ? `c${conversaId}` : `n${documentoId ?? "geral"}`}
           ambiente="profissional"
           documentoId={documento?.id ?? null}

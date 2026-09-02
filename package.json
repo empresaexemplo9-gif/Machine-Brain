@@ -10,9 +10,10 @@
     "typecheck": "tsc --noEmit",
     "verificar:catalogo": "tsc scripts/verificar-catalogo.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-catalogo.js",
     "verificar:fluxos": "node scripts/verificar-fluxos.mjs",
-    "verificar": "npm run typecheck && npm run verificar:catalogo && npm run verificar:rls && npm run build && npm run verificar:fluxos",
+    "verificar": "npm run typecheck && npm run verificar:catalogo && npm run verificar:provedores && npm run verificar:rls && npm run build && npm run verificar:fluxos",
     "verificar:rls": "bash scripts/verificar-rls.sh",
-    "verificar:conexao": "tsc scripts/verificar-conexao.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-conexao.js"
+    "verificar:conexao": "tsc scripts/verificar-conexao.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node .cache/scripts/scripts/verificar-conexao.js",
+    "verificar:provedores": "tsc scripts/verificar-provedores.ts --outDir .cache/scripts --noEmit false --module commonjs --moduleResolution node10 --target es2022 --skipLibCheck --rootDir . && node --conditions=react-server .cache/scripts/scripts/verificar-provedores.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",

@@ -78,9 +78,10 @@ cp .env.example .env.local     # preencha as variáveis do Supabase
 npm run dev                    # http://localhost:3000
 ```
 
-Sem `ANTHROPIC_API_KEY` a aplicação sobe do mesmo jeito, em modo demonstração:
+Sem chave de IA nenhuma a aplicação sobe do mesmo jeito, em modo demonstração:
 navegação, catálogo de fontes, cadastro e histórico funcionam; as respostas do
-modelo são substituídas por um aviso explícito.
+modelo são substituídas por um aviso explícito. Basta **uma** das chaves da
+seção *Modos de IA* abaixo para ativar.
 
 Sem as variáveis do Supabase, as telas de acesso explicam o que falta em vez de
 falhar com erro de conexão.
@@ -97,7 +98,7 @@ ambiente do provedor. Na Vercel, em **Settings → Environment Variables**:
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (ou a anon em `NEXT_PUBLIC_SUPABASE_ANON_KEY`) |
-| `ANTHROPIC_API_KEY` | a chave do modelo |
+| uma chave de IA | `GROQ_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY` ou `ANTHROPIC_API_KEY` |
 
 Marque os ambientes em que cada uma vale. É aqui que o erro costuma acontecer:
 definir só em *Preview* deixa o domínio de produção — o endereço que as pessoas
@@ -118,11 +119,50 @@ ambiente errado, deploy não refeito, migração não aplicada, ou aplicada pela
 metade. É a mesma bateria de `npm run verificar:conexao` — mesmo módulo, para
 não divergirem — e não imprime valor de chave nenhuma.
 
+## Modos de IA
+
+São quatro, e **basta um**. O usuário troca no seletor do chat; a plataforma só
+oferece os que têm chave configurada.
+
+| Modo | Provedor | Para quê | Variável |
+| --- | --- | --- | --- |
+| **Estudo** | Groq | O mais rápido — dúvida durante a leitura | `GROQ_API_KEY` |
+| **Pesquisa** | Google Gemini | Contexto longo — cruzar vários dispositivos | `GEMINI_API_KEY` |
+| **Debate** | OpenRouter | Modelos abertos variados — ouvir o contraponto | `OPENROUTER_API_KEY` |
+| **Parecer** | Anthropic | O mais criterioso, e o único pago | `ANTHROPIC_API_KEY` |
+
+Os três primeiros têm nível gratuito: a plataforma funciona inteira antes de
+existir plano pago. Sem nenhuma chave, ela entra em modo demonstração e diz
+isso — nunca preenche o espaço com direito inventado.
+
+Quando ninguém escolhe, vale a ordem da tabela: gratuitos primeiro, pago por
+último. Assim a chave paga nunca é gasta sem alguém pedir.
+
+O modelo de cada provedor é variável de ambiente (`MB_MODEL_GROQ`,
+`MB_MODEL_GEMINI`, `MB_MODEL_OPENROUTER`, `MB_MODEL_PRINCIPAL`), porque provedor
+aposenta modelo do nível gratuito com frequência — quando acontecer, é uma linha
+no painel, não um deploy.
+
+Groq e OpenRouter falam o mesmo dialeto (`/chat/completions`), então um arquivo
+atende os dois. O Gemini tem API própria e tem a sua. As três usam `fetch`
+direto: nenhuma dependência nova entrou por causa disto.
+
+A saída estruturada (questões, plano de estudos, análise de documento, roteiro)
+pede ferramenta onde há suporte e aceita JSON no texto onde não há — modelo
+aberto gratuito nem sempre sabe chamar ferramenta. Nos dois caminhos o resultado
+passa pelo mesmo schema Zod antes de virar dado: ou o tipo certo, ou erro.
+
+Se um modo estourar o limite gratuito, a mensagem diz isso e sugere trocar. A
+plataforma **não** troca sozinha: o usuário escolheu "Debate" porque queria
+aquele ponto de vista, e substituí-lo em silêncio seria entregar outra coisa com
+a mesma cara.
+
 ## Verificação
 
 ```bash
 npm run typecheck            # tsc --noEmit
 npm run verificar:catalogo   # integridade e alcançabilidade das fontes jurídicas
+npm run verificar:provedores # protocolo dos provedores de IA, contra servidor de teste
 npm run verificar:rls        # prova as políticas de RLS contra um Postgres real
 npm run verificar:conexao    # diagnostica o projeto Supabase configurado
 npm run build                # build de produção
@@ -136,6 +176,15 @@ Postgres descartável, recria localmente o que o Supabase provê pronto (schema
 lê, insere, altera nem apaga a linha de outro — por nenhum caminho. Também falha
 se alguma tabela nova entrar sem RLS ou sem política. Não precisa de rede nem de
 projeto Supabase.
+
+**`verificar:provedores`** sobe um servidor local que responde como Groq,
+OpenRouter e Gemini respondem, e faz os provedores de verdade falarem com ele.
+Não valida chave nem cota do provedor real — valida o que é nosso, que é a
+interpretação da resposta: remontar fluxo SSE cortado no meio de uma linha,
+ignorar keep-alive que não é JSON, traduzir o papel `assistant` para `model` no
+Gemini, aceitar JSON no texto quando o modelo não sabe chamar ferramenta, e
+transformar o 429 em mensagem que diz o que fazer. É parser, que é o código que
+passa na revisão e quebra no ar. Não precisa de rede nem de chave.
 
 **`verificar:conexao`** é o primeiro comando a rodar depois de criar o projeto.
 Ele responde, em ordem, o que costuma dar errado: as variáveis estão certas (e

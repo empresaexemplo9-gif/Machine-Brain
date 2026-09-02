@@ -58,6 +58,9 @@ jobs:
 
       # Sobe um Postgres descartável, aplica as migrações e prova que nenhum
       # usuário alcança a linha de outro.
+      - name: Provedores de IA
+        run: npm run verificar:provedores
+
       - name: Políticas de RLS
         run: npm run verificar:rls
 

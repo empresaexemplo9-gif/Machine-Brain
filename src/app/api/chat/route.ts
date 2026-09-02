@@ -3,6 +3,7 @@ import { z } from "zod";
 import { disciplinaPorSlug, ehNivelValido } from "@/lib/curriculo";
 import { auditarCitacoes, buscarFontes, type Fonte } from "@/lib/fontes";
 import { MODO_DEMONSTRACAO, responderEmFluxo } from "@/lib/ia/cliente";
+import { IDS_MODOS } from "@/lib/ia/modos";
 import { promptDoJurista, promptDoProfessor } from "@/lib/ia/prompts";
 import { perfilDoEstudante, usuarioAtual } from "@/lib/auth";
 import { carregarDocumento } from "@/lib/servicos/documentos";
@@ -25,6 +26,8 @@ const Entrada = z.object({
   nivel: z.string().optional(),
   /** true quando o usuário apertou "ainda não entendi". */
   reexplicar: z.boolean().optional(),
+  /** Modo de IA escolhido. Ausente ou indisponível: usa o primeiro com chave. */
+  modo: z.enum(IDS_MODOS).optional(),
 });
 
 /**
@@ -130,7 +133,12 @@ export async function POST(requisicao: Request) {
       try {
         enviar({ tipo: "inicio", conversaId: idDaConversa });
 
-        for await (const pedaco of responderEmFluxo({ sistema, turnos, maxTokens: 2048 })) {
+        for await (const pedaco of responderEmFluxo({
+          sistema,
+          turnos,
+          maxTokens: 2048,
+          modo: entrada.modo,
+        })) {
           completa += pedaco;
           enviar({ tipo: "texto", valor: pedaco });
         }

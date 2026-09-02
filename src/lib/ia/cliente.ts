@@ -1,108 +1,67 @@
 import "server-only";
 
-import Anthropic from "@anthropic-ai/sdk";
-import { z } from "zod";
+import type { z } from "zod";
+import type { ModoIA } from "./modos";
+import { escolherProvedor, modosDisponiveis, semNenhumaChave } from "./provedores";
+import { ErroDeGeracao, type OpcoesConversa, type Turno } from "./provedores/tipos";
 
 /**
  * Acesso ao modelo.
  *
- * Sem ANTHROPIC_API_KEY a plataforma NÃO degrada para respostas fabricadas:
- * ela entra em modo demonstração e diz isso na cara do usuário. Toda a
- * interface continua navegável, o que permite avaliar o produto sem chave, mas
- * nenhuma frase jurídica inventada é apresentada como se fosse resposta.
+ * Esta é a fachada que o resto da aplicação usa; quem sabe falar com cada
+ * provedor é src/lib/ia/provedores/. A escolha de modo é sempre opcional: sem
+ * ela, usa-se o primeiro disponível, gratuitos antes do pago.
+ *
+ * Sem chave NENHUMA a plataforma não degrada para respostas fabricadas: entra
+ * em modo demonstração e diz isso na cara do usuário. Toda a interface continua
+ * navegável, o que permite avaliar o produto sem chave, mas nenhuma frase
+ * jurídica inventada é apresentada como se fosse resposta.
  */
 
-export const MODO_DEMONSTRACAO = !process.env.ANTHROPIC_API_KEY;
+export { ErroDeGeracao };
+export type { OpcoesConversa, Turno };
+
+/** Calculado a cada leitura: em serverless o processo pode subir sem a chave. */
+export const MODO_DEMONSTRACAO = semNenhumaChave();
 
 export const AVISO_DEMONSTRACAO =
-  "**Modo demonstração.** A plataforma está rodando sem `ANTHROPIC_API_KEY`, " +
-  "então não há resposta do modelo para exibir aqui. As fontes jurídicas ao lado " +
-  "são reais e vêm do catálogo verificado — o que falta é a camada de " +
-  "interpretação. Configure a chave em `.env.local` para ativar o Professor IA " +
-  "e o Jurista IA.";
+  "**Modo demonstração.** A plataforma está rodando sem chave de nenhum provedor " +
+  "de IA, então não há resposta do modelo para exibir aqui. As fontes jurídicas ao " +
+  "lado são reais e vêm do catálogo verificado — o que falta é a camada de " +
+  "interpretação. Basta uma chave gratuita (Groq, Gemini ou OpenRouter) para " +
+  "ativar o Professor IA e o Jurista IA.";
 
-let cliente: Anthropic | null = null;
+export { modosDisponiveis };
 
-function obterCliente(): Anthropic {
-  if (!cliente) cliente = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  return cliente;
-}
-
-export const MODELO_PRINCIPAL = process.env.MB_MODEL_PRINCIPAL ?? "claude-opus-5";
-export const MODELO_RAPIDO = process.env.MB_MODEL_RAPIDO ?? "claude-sonnet-5";
-
-export interface Turno {
-  papel: "user" | "assistant";
-  conteudo: string;
-}
-
-export interface OpcoesConversa {
-  sistema: string;
-  turnos: Turno[];
-  modelo?: string;
-  maxTokens?: number;
-  temperatura?: number;
-}
-
-function paraMensagens(turnos: Turno[]): Anthropic.MessageParam[] {
-  return turnos.map((t) => ({ role: t.papel, content: t.conteudo }));
+interface ComModo {
+  modo?: ModoIA;
 }
 
 /** Resposta completa, sem streaming. Usada em tarefas de fundo. */
-export async function responder(opcoes: OpcoesConversa): Promise<string> {
-  if (MODO_DEMONSTRACAO) return AVISO_DEMONSTRACAO;
-
-  const resposta = await obterCliente().messages.create({
-    model: opcoes.modelo ?? MODELO_PRINCIPAL,
-    max_tokens: opcoes.maxTokens ?? 2048,
-    temperature: opcoes.temperatura ?? 0.3,
-    system: opcoes.sistema,
-    messages: paraMensagens(opcoes.turnos),
-  });
-
-  return resposta.content
-    .filter((bloco): bloco is Anthropic.TextBlock => bloco.type === "text")
-    .map((bloco) => bloco.text)
-    .join("");
+export async function responder(opcoes: OpcoesConversa & ComModo): Promise<string> {
+  const provedor = escolherProvedor(opcoes.modo);
+  if (!provedor) return AVISO_DEMONSTRACAO;
+  return provedor.responder(opcoes);
 }
 
 /** Resposta em pedaços, para o chat renderizar enquanto o modelo escreve. */
 export async function* responderEmFluxo(
-  opcoes: OpcoesConversa,
+  opcoes: OpcoesConversa & ComModo,
 ): AsyncGenerator<string, void, unknown> {
-  if (MODO_DEMONSTRACAO) {
+  const provedor = escolherProvedor(opcoes.modo);
+  if (!provedor) {
     yield AVISO_DEMONSTRACAO;
     return;
   }
-
-  const fluxo = obterCliente().messages.stream({
-    model: opcoes.modelo ?? MODELO_PRINCIPAL,
-    max_tokens: opcoes.maxTokens ?? 2048,
-    temperature: opcoes.temperatura ?? 0.3,
-    system: opcoes.sistema,
-    messages: paraMensagens(opcoes.turnos),
-  });
-
-  for await (const evento of fluxo) {
-    if (evento.type === "content_block_delta" && evento.delta.type === "text_delta") {
-      yield evento.delta.text;
-    }
-  }
+  yield* provedor.responderEmFluxo(opcoes);
 }
-
-// ---------------------------------------------------------------------------
-// Saída estruturada
-// ---------------------------------------------------------------------------
-
-export class ErroDeGeracao extends Error {}
 
 /**
  * Pede ao modelo uma saída que obedece a um schema Zod.
  *
- * O schema vira uma ferramenta e o modelo é obrigado a usá-la, então o retorno
- * já chega como JSON — em vez de texto que precisaríamos garimpar. A validação
- * Zod por cima cobre o caso de o modelo preencher o formato certo com conteúdo
- * fora do domínio (enum inválido, lista vazia, etc.).
+ * Cada provedor resolve isso do jeito que consegue — ferramenta forçada onde
+ * há suporte, JSON no texto onde não há — e todos validam com o mesmo schema
+ * antes de devolver. Quem chama recebe o tipo, ou um erro; nunca um meio-termo.
  */
 export async function gerarEstruturado<T>(opcoes: {
   sistema: string;
@@ -110,48 +69,16 @@ export async function gerarEstruturado<T>(opcoes: {
   schema: z.ZodType<T>;
   nomeFerramenta: string;
   descricaoFerramenta: string;
-  modelo?: string;
+  modo?: ModoIA;
   maxTokens?: number;
   temperatura?: number;
 }): Promise<T> {
-  if (MODO_DEMONSTRACAO) {
+  const provedor = escolherProvedor(opcoes.modo);
+  if (!provedor) {
     throw new ErroDeGeracao(
-      "Esta funcionalidade precisa do modelo. Configure ANTHROPIC_API_KEY em .env.local para usá-la.",
+      "Esta funcionalidade precisa de um modelo. Configure uma chave gratuita " +
+        "(GROQ_API_KEY, GEMINI_API_KEY ou OPENROUTER_API_KEY) para usá-la.",
     );
   }
-
-  // A API rejeita chaves de metadados no input_schema, então $schema sai fora.
-  const jsonSchema = z.toJSONSchema(opcoes.schema) as Record<string, unknown>;
-  delete jsonSchema.$schema;
-
-  const resposta = await obterCliente().messages.create({
-    model: opcoes.modelo ?? MODELO_PRINCIPAL,
-    max_tokens: opcoes.maxTokens ?? 4096,
-    temperature: opcoes.temperatura ?? 0.4,
-    system: opcoes.sistema,
-    messages: paraMensagens(opcoes.turnos),
-    tools: [
-      {
-        name: opcoes.nomeFerramenta,
-        description: opcoes.descricaoFerramenta,
-        input_schema: jsonSchema as Anthropic.Tool["input_schema"],
-      },
-    ],
-    tool_choice: { type: "tool", name: opcoes.nomeFerramenta },
-  });
-
-  const bloco = resposta.content.find(
-    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use",
-  );
-  if (!bloco) throw new ErroDeGeracao("O modelo não retornou a estrutura solicitada.");
-
-  const validado = opcoes.schema.safeParse(bloco.input);
-  if (!validado.success) {
-    throw new ErroDeGeracao(
-      `A estrutura retornada não passou na validação: ${validado.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ")}`,
-    );
-  }
-  return validado.data;
+  return provedor.gerarEstruturado(opcoes);
 }

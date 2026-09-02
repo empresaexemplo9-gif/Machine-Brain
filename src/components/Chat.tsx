@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AuditoriaDeCitacoes, Fonte } from "@/lib/fontes";
 import { NIVEIS_EXPLICACAO } from "@/lib/curriculo";
+import { descreverModo, type ModoIA } from "@/lib/ia/modos";
 import { Prosa } from "./Prosa";
 import { PainelDeFontes, SeloDeVerificacao } from "./PainelDeFontes";
 
@@ -30,6 +31,7 @@ export function Chat({
   mensagensIniciais = [],
   sugestoes = [],
   perguntaAutomatica,
+  modos = [],
 }: {
   ambiente: "estudante" | "profissional";
   disciplinaSlug?: string | null;
@@ -41,6 +43,8 @@ export function Chat({
   sugestoes?: string[];
   /** Pergunta disparada sozinha ao abrir, vinda de um link "Estudar este tema". */
   perguntaAutomatica?: string;
+  /** Modos de IA com chave configurada, na ordem de preferência do servidor. */
+  modos?: ModoIA[];
 }) {
   const [bolhas, setBolhas] = useState<Bolha[]>(() =>
     mensagensIniciais.map((m) => ({
@@ -56,6 +60,7 @@ export function Chat({
   const [conversaId, setConversaId] = useState<number | null>(conversaIdInicial);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [modo, setModo] = useState<ModoIA | undefined>(modos[0]);
 
   const fim = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -105,6 +110,7 @@ export function Chat({
           documentoId: documentoId ?? null,
           nivel,
           reexplicar,
+          modo,
         }),
       });
 
@@ -164,6 +170,32 @@ export function Chat({
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col">
+      {/* Um modo só não é escolha: a régua só aparece quando há o que trocar. */}
+      {modos.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="titulo-secao mr-1">Modo</span>
+          {modos.map((id) => {
+            const m = descreverModo(id);
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setModo(id)}
+                title={`${m.provedor} — ${m.descricao}`}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  modo === id
+                    ? "border-[var(--color-ouro)] bg-[var(--color-ouro)]/15 text-[var(--color-ouro)]"
+                    : "border-[var(--color-borda)] text-[var(--color-texto-fraco)] hover:border-[var(--color-borda-forte)]"
+                }`}
+              >
+                {m.rotulo}
+                <span className="ml-1.5 opacity-60">{m.resumo}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {ambiente === "estudante" && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="titulo-secao mr-1">Explicar como</span>
