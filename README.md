@@ -1,4 +1,4 @@
-# DRAP EDUCA
+# DRAP JURÍDICO
 
 **A plataforma que acompanha você do primeiro período de Direito até a advocacia.**
 
@@ -161,5 +161,5 @@ Este repositório entrega o **V1 (MVP)**. Dois avisos honestos:
 
 ---
 
-DRAP EDUCA é apoio ao estudo e à prática jurídica. Não substitui a análise do
+DRAP JURÍDICO é apoio ao estudo e à prática jurídica. Não substitui a análise do
 advogado responsável pelo caso.
