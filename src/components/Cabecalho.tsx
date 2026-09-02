@@ -38,7 +38,7 @@ export function Cabecalho({
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--color-borda)] bg-[var(--color-fundo)]/85 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-5 py-3">
+      <div className="flex w-full items-center gap-6 px-5 py-3 sm:px-8 lg:px-12">
         <Link href={`/${ambiente}`} className="shrink-0">
           <Logo />
         </Link>

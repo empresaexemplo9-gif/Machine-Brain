@@ -20,7 +20,7 @@ export default async function LayoutEstudante({ children }: { children: React.Re
   return (
     <>
       <Cabecalho usuario={usuario} ambiente="estudante" />
-      <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+      <main className="pagina">{children}</main>
     </>
   );
 }

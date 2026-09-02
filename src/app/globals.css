@@ -64,6 +64,20 @@ body::before {
 }
 
 @layer components {
+  /* Largura das páginas: a tela inteira, com respiro nas bordas.
+     Telas largas são o caso comum aqui (estudar com o material do lado), então
+     a régua central estreita desperdiçava metade do monitor. O que continua com
+     largura máxima é só o texto corrido em si — linha longa demais é ilegível,
+     e isso é limite de leitura, não de layout. */
+  .pagina {
+    @apply w-full px-5 py-8 sm:px-8 lg:px-12;
+  }
+
+  /* Parágrafo de texto corrido. Some em telas estreitas, limita em telas largas. */
+  .prosa {
+    @apply max-w-[70ch];
+  }
+
   .cartao {
     @apply rounded-xl border border-[var(--color-borda)] bg-[var(--color-superficie)] p-5;
   }

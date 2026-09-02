@@ -38,7 +38,7 @@ export default async function PaginaDaDisciplina({ params }: Props) {
           <span className="mr-2">{disciplina.emoji}</span>
           {disciplina.nome}
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--color-texto-suave)]">
+        <p className="mt-2 prosa text-sm leading-relaxed text-[var(--color-texto-suave)]">
           {disciplina.ementa}
         </p>
         <div className="mt-5 flex flex-wrap gap-2">

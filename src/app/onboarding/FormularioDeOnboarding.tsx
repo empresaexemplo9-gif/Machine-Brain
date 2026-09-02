@@ -91,7 +91,7 @@ export function FormularioDeOnboarding({
 
       <section>
         <h2 className="titulo-secao mb-3">Qual é o seu objetivo agora?</h2>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {OBJETIVOS.map((o) => (
             <label
               key={o}
@@ -115,7 +115,7 @@ export function FormularioDeOnboarding({
         <p className="mb-3 text-xs text-[var(--color-texto-fraco)]">
           Dá para trocar a qualquer momento durante a conversa.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {NIVEIS_EXPLICACAO.map((n) => (
             <label
               key={n.id}
@@ -147,7 +147,7 @@ export function FormularioDeOnboarding({
           Esta é a grade típica do {periodo}º período. Cada faculdade monta a sua — desmarque o que
           não bate e marque o que faltou.
         </p>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {[...doPeriodo, ...extras].map((d) => (
             <label
               key={d.slug}

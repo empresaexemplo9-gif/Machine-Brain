@@ -17,7 +17,7 @@ export default async function PaginaDocumentos() {
     <div className="space-y-10">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">📄 Análise de documentos</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
           Envie uma peça, um contrato ou os autos. A plataforma extrai o texto e devolve o caso
           organizado — com os pontos que merecem sua atenção antes de qualquer coisa.
         </p>

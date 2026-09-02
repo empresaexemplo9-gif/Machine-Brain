@@ -17,7 +17,7 @@ export default async function PaginaRoteiro() {
     <div className="space-y-10">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">🧭 Nunca vi esse caso</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
           Chegou um tipo de causa que você não domina? Descreva o caso e receba um roteiro de
           atuação: o que fazer primeiro, o que perguntar antes de seguir e onde quem é novo naquilo
           costuma errar.

@@ -41,7 +41,7 @@ export default async function Inicio() {
   if (usuario) redirect("/estudante");
 
   return (
-    <main className="mx-auto max-w-6xl px-5 pb-24">
+    <main className="w-full px-5 pb-24 sm:px-8 lg:px-12">
       <header className="flex items-center justify-between py-6">
         <Logo />
         <div className="flex items-center gap-3">

@@ -25,7 +25,7 @@ export default async function PaginaOnboarding() {
   const periodo = perfil?.periodo ?? 1;
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-12">
+    <main className="pagina py-12">
       <Link href="/" className="mb-8 inline-block">
         <Logo />
       </Link>

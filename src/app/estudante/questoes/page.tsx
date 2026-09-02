@@ -32,7 +32,7 @@ export default async function PaginaQuestoes({
     <div className="space-y-10">
       <header>
         <h1 className="text-2xl font-bold tracking-tight">📝 Gerador de questões</h1>
-        <p className="mt-1 max-w-2xl text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
           Peça quantas questões quiser, no estilo e na dificuldade que você precisa. A correção
           explica por que a certa está certa — e por que a errada mais tentadora te pegou.
         </p>

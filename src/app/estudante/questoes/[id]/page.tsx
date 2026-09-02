@@ -35,7 +35,7 @@ export default async function PaginaDoSimulado({
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="w-full space-y-8">
       <header>
         <p className="text-xs text-[var(--color-texto-fraco)]">
           <Link href="/estudante/questoes" className="hover:text-[var(--color-texto)]">

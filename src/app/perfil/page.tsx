@@ -29,7 +29,7 @@ export default async function PaginaDePerfil() {
   return (
     <>
       <Cabecalho usuario={usuario} ambiente="estudante" />
-      <main className="mx-auto max-w-3xl space-y-8 px-5 py-8">
+      <main className="pagina space-y-8">
         <header>
           <h1 className="text-2xl font-bold tracking-tight">Seu perfil</h1>
           <p className="mt-1 text-sm text-[var(--color-texto-suave)]">{usuario.email}</p>

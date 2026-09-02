@@ -19,7 +19,7 @@ export default async function LayoutProfissional({ children }: { children: React
   return (
     <>
       <Cabecalho usuario={usuario} ambiente="profissional" />
-      <main className="mx-auto max-w-7xl px-5 py-8">{children}</main>
+      <main className="pagina">{children}</main>
     </>
   );
 }

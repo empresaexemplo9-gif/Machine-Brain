@@ -23,7 +23,7 @@ export default async function PaginaDoRoteiro({
   const { roteiro } = registro;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="w-full space-y-8">
       <header>
         <p className="text-xs text-[var(--color-texto-fraco)]">
           <Link href="/profissional/roteiro" className="hover:text-[var(--color-texto)]">

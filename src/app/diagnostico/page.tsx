@@ -47,7 +47,7 @@ export default async function PaginaDeDiagnostico() {
   const cor = CORES[estado];
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 px-5 py-10">
+    <main className="pagina space-y-6 py-10">
       <header className="flex items-center justify-between gap-4">
         <Logo altura={28} />
         <Link href="/" className="text-xs text-[var(--color-texto-suave)] hover:underline">
