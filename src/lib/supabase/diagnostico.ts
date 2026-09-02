@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_CHAVE_PUBLICA, SUPABASE_URL } from "./config";
+import {
+  CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA,
+  SUPABASE_CHAVE_PUBLICA,
+  SUPABASE_URL,
+} from "./config";
 
 /**
  * Diagnóstico da configuração, executado dentro da própria aplicação.
@@ -86,60 +90,82 @@ export async function diagnosticar(): Promise<Diagnostico> {
   const passos: string[] = [];
 
   // -----------------------------------------------------------------------
-  // 1. O build recebeu as variáveis?
+  // 1. A configuração chegou — e por qual nome de variável?
+  //
+  // São vários nomes aceitos (ver config.ts). Dizer qual deles respondeu evita
+  // a confusão de "eu defini a variável" quando o valor veio de outra.
   // -----------------------------------------------------------------------
-  const daPublishable = (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "").length > 0;
-  const daAnon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").length > 0;
+  const nomeDefinido = (...nomes: readonly [string, string | undefined][]): string | undefined =>
+    nomes.find(([, valor]) => (valor ?? "").trim().length > 0)?.[0];
+
+  const nomeDaUrl = nomeDefinido(
+    ["NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL],
+    ["SUPABASE_URL", process.env.SUPABASE_URL],
+    ["SUPABASE_URL_DEV", process.env.SUPABASE_URL_DEV],
+  );
+
+  const nomeDaChave = nomeDefinido(
+    ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY],
+    ["NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY],
+    ["SUPABASE_PUBLISHABLE_KEY", process.env.SUPABASE_PUBLISHABLE_KEY],
+    ["SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY],
+    ["SUPABASE_ANON_KEY_DEV", process.env.SUPABASE_ANON_KEY_DEV],
+  );
 
   if (SUPABASE_URL) {
-    checagens.push({ titulo: "NEXT_PUBLIC_SUPABASE_URL", estado: "ok", detalhe: SUPABASE_URL });
+    checagens.push({
+      titulo: `endereço do projeto — via ${nomeDaUrl}`,
+      estado: "ok",
+      detalhe: SUPABASE_URL,
+    });
   } else {
     checagens.push({
-      titulo: "NEXT_PUBLIC_SUPABASE_URL",
+      titulo: "endereço do projeto",
       estado: "falha",
-      detalhe: "ausente neste build",
+      detalhe: "nenhuma variável de URL definida",
     });
     passos.push(`Defina NEXT_PUBLIC_SUPABASE_URL (https://<ref>.supabase.co) ${ONDE}.`);
   }
 
-  if (SUPABASE_CHAVE_PUBLICA) {
+  if (CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA) {
+    // config.ts já recusou a chave; a aplicação está desconfigurada de propósito.
     checagens.push({
-      titulo: daPublishable
-        ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
-        : "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      titulo: `${nomeDaChave} contém a chave SECRETA (service_role)`,
+      estado: "falha",
+      detalhe:
+        "ela ignora o RLS — a aplicação recusou usá-la e continua desconfigurada, " +
+        "que é o comportamento seguro",
+    });
+    passos.unshift(
+      `Troque o valor de ${nomeDaChave} pela chave publishable (sb_publishable_…) ou anon, e ` +
+        "revogue a service_role no painel do Supabase — ela esteve fora do cofre.",
+    );
+  } else if (SUPABASE_CHAVE_PUBLICA) {
+    checagens.push({
+      titulo: `chave pública — via ${nomeDaChave}`,
       estado: "ok",
       detalhe: `presente — ${mascarar(SUPABASE_CHAVE_PUBLICA)}`,
     });
-    if (daPublishable && daAnon) {
-      checagens.push({
-        titulo: "duas chaves definidas",
-        estado: "aviso",
-        detalhe: "a publishable tem precedência; a anon está sendo ignorada",
-      });
-    }
-    if (ehServiceRole(SUPABASE_CHAVE_PUBLICA)) {
-      checagens.push({
-        titulo: "a chave configurada é a SERVICE_ROLE",
-        estado: "falha",
-        detalhe:
-          "ela ignora o RLS e está indo para o navegador — troque AGORA pela chave " +
-          "publishable/anon e gere uma service_role nova no painel",
-      });
-      passos.unshift(
-        "URGENTE: substitua a chave por uma publishable (sb_publishable_…) ou anon, e " +
-          "revogue a service_role exposta no painel do Supabase.",
-      );
-    }
   } else {
     checagens.push({
       titulo: "chave pública do Supabase",
       estado: "falha",
-      detalhe: "nem NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY nem NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      detalhe: "nenhuma das variáveis de chave pública está definida",
     });
     passos.push(
       `Defina NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (painel do Supabase → Project Settings → ` +
         `API Keys) ${ONDE}.`,
     );
+  }
+
+  // A aplicação não usa service_role em lugar nenhum. Se ela existe no ambiente,
+  // é superfície de risco sem contrapartida: um `import` distraído basta.
+  if ((process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").length > 0) {
+    checagens.push({
+      titulo: "SUPABASE_SERVICE_ROLE_KEY está definida",
+      estado: "aviso",
+      detalhe: "esta aplicação nunca a usa — pode (e deve) ser removida do ambiente",
+    });
   }
 
   checagens.push({
