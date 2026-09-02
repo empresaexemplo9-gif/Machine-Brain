@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Permite reexecutar sob demanda pelo botão "Run workflow" na aba Actions.
+  # Útil depois de mexer em secrets ou nas variáveis de ambiente: uma execução
+  # nova pega os valores atuais, sem precisar de um commit só para isso.
+  workflow_dispatch:
 
 # Um push novo no mesmo PR cancela a execução anterior: o resultado dela já não
 # vale para o código que está lá.
