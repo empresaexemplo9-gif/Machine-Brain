@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Documentos" };
 
 export default async function PaginaDocumentos() {
   const usuario = await exigirUsuario();
-  const documentos = documentosDoUsuario(usuario.id, 30);
+  const documentos = await documentosDoUsuario(30);
 
   return (
     <div className="space-y-10">

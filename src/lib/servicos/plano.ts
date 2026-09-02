@@ -1,18 +1,18 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { gerarEstruturado } from "@/lib/ia/cliente";
 import { promptPlanoDeEstudos } from "@/lib/ia/prompts";
 import { PlanoDeEstudosSchema, type PlanoDeEstudos } from "@/lib/ia/schemas";
 import { desempenhoDoAluno } from "./desempenho";
 
 export async function gerarPlanoDeEstudos(opcoes: {
-  usuarioId: number;
+  usuarioId: string;
   nomeAluno: string;
   periodo: number;
   objetivo: string;
 }): Promise<PlanoDeEstudos> {
-  const desempenho = desempenhoDoAluno(opcoes.usuarioId).map((d) => ({
+  const desempenho = (await desempenhoDoAluno()).map((d) => ({
     disciplina: d.nome,
     acertos: d.acertos,
     total: d.total,
@@ -34,24 +34,27 @@ export async function gerarPlanoDeEstudos(opcoes: {
     temperatura: 0.5,
   });
 
-  db()
-    .prepare("INSERT INTO planos_estudo (usuario_id, conteudo_json) VALUES (?, ?)")
-    .run(opcoes.usuarioId, JSON.stringify(plano));
+  const supabase = await supabaseServidor();
+  const { error } = await supabase
+    .from("planos_estudo")
+    .insert({ usuario_id: opcoes.usuarioId, conteudo: plano });
+  if (error) throw new Error(`Não consegui salvar o plano: ${error.message}`);
 
   return plano;
 }
 
-export function planoMaisRecente(
-  usuarioId: number,
-): { plano: PlanoDeEstudos; criado_em: string } | null {
-  const linha = db()
-    .prepare(
-      "SELECT conteudo_json, criado_em FROM planos_estudo WHERE usuario_id = ? ORDER BY id DESC LIMIT 1",
-    )
-    .get(usuarioId) as { conteudo_json: string; criado_em: string } | undefined;
-  if (!linha) return null;
-  return {
-    plano: JSON.parse(linha.conteudo_json) as PlanoDeEstudos,
-    criado_em: linha.criado_em,
-  };
+export async function planoMaisRecente(): Promise<{
+  plano: PlanoDeEstudos;
+  criado_em: string;
+} | null> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("planos_estudo")
+    .select("conteudo, criado_em")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  return { plano: data.conteudo as PlanoDeEstudos, criado_em: data.criado_em as string };
 }

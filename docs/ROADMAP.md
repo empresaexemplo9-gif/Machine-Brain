@@ -4,7 +4,7 @@
 
 | # | Item | Situação |
 | --- | --- | --- |
-| 1 | Login e cadastro | ✅ sessão em cookie assinado, senha com bcrypt |
+| 1 | Login e cadastro | ✅ Supabase Auth, sessão em cookie httpOnly |
 | 2 | Perfil do estudante | ✅ período, faculdade, objetivo, nível e grade ajustável |
 | 3 | Professor IA | ✅ streaming, 4 níveis, botão "ainda não entendi" |
 | 4 | Biblioteca de matérias | ✅ 40 disciplinas em 10 períodos, com ementa e temas |
@@ -52,8 +52,9 @@ disciplina com semáforo, e o roteiro "nunca vi esse caso" em oito etapas.
    peças, controle de prazos.
 3. **Aplicativo móvel**, aproveitando o modo voz.
 4. **Plano Escritório**: múltiplos usuários, biblioteca interna, base de
-   conhecimento do escritório, controle de acesso. É aqui que SQLite vira
-   Postgres.
+   conhecimento do escritório, controle de acesso. Em Postgres isso vira uma
+   tabela de organizações e políticas de RLS por pertencimento, não por dono —
+   a mudança é nas políticas, não na aplicação.
 5. **Professor com avatar**, se o V2 mostrar que a aula em vídeo prende mais que
    o texto.
 
@@ -71,9 +72,14 @@ de ambiente, que é o necessário para plugar planos sem reescrita.
 
 ## Dívida técnica assumida
 
-- Sem ferramenta de migração de schema: `db.ts` aplica o DDL na conexão.
-- Sem testes unitários; a cobertura vem do teste de fluxos em navegador e do
-  verificador de catálogo.
+- Sem testes unitários; a cobertura vem do verificador de catálogo, das provas
+  de RLS e do percurso em navegador.
 - Os caminhos que dependem do modelo foram exercitados apenas em modo
   demonstração — falta uma passada com chave de API real.
+- O percurso completo contra um projeto Supabase de verdade ainda não foi
+  rodado; o que está provado é o schema e o isolamento por RLS.
+- `definirMatriculas()` apaga e reinsere sem transação, porque são duas chamadas
+  HTTP. Uma falha no meio deixa o aluno sem grade e ele refaz o onboarding.
 - `historicoParaModelo()` corta em 12 turnos por contagem, não por tokens.
+- O arquivo de migração é único. A segunda mudança de schema precisa virar uma
+  migração nova, nunca uma edição desta.

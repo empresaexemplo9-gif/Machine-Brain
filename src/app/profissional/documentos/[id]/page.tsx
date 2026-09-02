@@ -21,12 +21,12 @@ export default async function PaginaDoDocumento({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const usuario = await exigirUsuario();
+  await exigirUsuario();
   const { id } = await params;
   const numero = Number(id);
   if (!Number.isInteger(numero)) notFound();
 
-  const documento = carregarDocumento(numero, usuario.id);
+  const documento = await carregarDocumento(numero);
   if (!documento) notFound();
 
   const analise = documento.analise;

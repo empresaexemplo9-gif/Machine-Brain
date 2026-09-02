@@ -18,9 +18,8 @@ const CORES_PRIORIDADE: Record<string, string> = {
 };
 
 export default async function PaginaDoPlano() {
-  const usuario = await exigirUsuario();
-  const desempenho = desempenhoDoAluno(usuario.id);
-  const registro = planoMaisRecente(usuario.id);
+  await exigirUsuario();
+  const [desempenho, registro] = await Promise.all([desempenhoDoAluno(), planoMaisRecente()]);
 
   return (
     <div className="space-y-10">

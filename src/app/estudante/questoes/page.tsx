@@ -17,7 +17,7 @@ export default async function PaginaQuestoes({
 }) {
   const usuario = await exigirUsuario();
   const params = await searchParams;
-  const matriculadas = disciplinasMatriculadas(usuario.id);
+  const matriculadas = await disciplinasMatriculadas();
 
   // O aluno pode treinar qualquer disciplina, mas as dele vêm primeiro.
   const conjunto = new Set(matriculadas);
@@ -26,7 +26,7 @@ export default async function PaginaQuestoes({
     ...DISCIPLINAS.filter((d) => !conjunto.has(d.slug)),
   ].map((d) => ({ slug: d.slug, nome: d.nome, emoji: d.emoji, minha: conjunto.has(d.slug) }));
 
-  const recentes = simuladosRecentes(usuario.id, 12);
+  const recentes = await simuladosRecentes(12);
 
   return (
     <div className="space-y-10">

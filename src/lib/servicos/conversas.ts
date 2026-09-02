@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db } from "@/lib/db";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import type { AuditoriaDeCitacoes } from "@/lib/fontes";
 
 export type Ambiente = "estudante" | "profissional";
@@ -14,90 +14,87 @@ export interface Mensagem {
   criado_em: string;
 }
 
-export function criarConversa(opcoes: {
-  usuarioId: number;
+export async function criarConversa(opcoes: {
+  usuarioId: string;
   ambiente: Ambiente;
   disciplinaSlug?: string | null;
   titulo: string;
-}): number {
-  const resultado = db()
-    .prepare(
-      "INSERT INTO conversas (usuario_id, ambiente, disciplina_slug, titulo) VALUES (?, ?, ?, ?)",
-    )
-    .run(
-      opcoes.usuarioId,
-      opcoes.ambiente,
-      opcoes.disciplinaSlug ?? null,
+}): Promise<number> {
+  const supabase = await supabaseServidor();
+  const { data, error } = await supabase
+    .from("conversas")
+    .insert({
+      usuario_id: opcoes.usuarioId,
+      ambiente: opcoes.ambiente,
+      disciplina_slug: opcoes.disciplinaSlug ?? null,
       // O título vem da primeira pergunta; cortamos para caber na barra lateral.
-      opcoes.titulo.slice(0, 80),
-    );
-  return Number(resultado.lastInsertRowid);
+      titulo: opcoes.titulo.slice(0, 80),
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) throw new Error(`Não consegui iniciar a conversa: ${error?.message}`);
+  return data.id as number;
 }
 
-export function conversaPertenceAo(conversaId: number, usuarioId: number): boolean {
-  const linha = db()
-    .prepare("SELECT 1 AS ok FROM conversas WHERE id = ? AND usuario_id = ?")
-    .get(conversaId, usuarioId);
-  return Boolean(linha);
+/**
+ * O RLS já impede ler conversa alheia, então isto não é a barreira de
+ * segurança — é o que separa "não é sua" de "não existe" para a interface.
+ */
+export async function conversaPertenceAo(conversaId: number): Promise<boolean> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase.from("conversas").select("id").eq("id", conversaId).maybeSingle();
+  return data !== null;
 }
 
-export function registrarMensagem(opcoes: {
+export async function registrarMensagem(opcoes: {
   conversaId: number;
+  usuarioId: string;
   papel: "user" | "assistant";
   conteudo: string;
   nivel?: string | null;
   auditoria?: AuditoriaDeCitacoes | null;
-}): number {
-  const resultado = db()
-    .prepare(
-      "INSERT INTO mensagens (conversa_id, papel, conteudo, nivel, auditoria_json) VALUES (?, ?, ?, ?, ?)",
-    )
-    .run(
-      opcoes.conversaId,
-      opcoes.papel,
-      opcoes.conteudo,
-      opcoes.nivel ?? null,
-      opcoes.auditoria ? JSON.stringify(opcoes.auditoria) : null,
-    );
-  return Number(resultado.lastInsertRowid);
+}): Promise<void> {
+  const supabase = await supabaseServidor();
+  const { error } = await supabase.from("mensagens").insert({
+    conversa_id: opcoes.conversaId,
+    usuario_id: opcoes.usuarioId,
+    papel: opcoes.papel,
+    conteudo: opcoes.conteudo,
+    nivel: opcoes.nivel ?? null,
+    auditoria: opcoes.auditoria ?? null,
+  });
+  if (error) throw new Error(`Não consegui gravar a mensagem: ${error.message}`);
 }
 
-export function mensagensDaConversa(conversaId: number): Mensagem[] {
-  const linhas = db()
-    .prepare(
-      "SELECT id, papel, conteudo, nivel, auditoria_json, criado_em FROM mensagens WHERE conversa_id = ? ORDER BY id",
-    )
-    .all(conversaId) as Array<{
-    id: number;
-    papel: "user" | "assistant";
-    conteudo: string;
-    nivel: string | null;
-    auditoria_json: string | null;
-    criado_em: string;
-  }>;
+export async function mensagensDaConversa(conversaId: number): Promise<Mensagem[]> {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("mensagens")
+    .select("id, papel, conteudo, nivel, auditoria, criado_em")
+    .eq("conversa_id", conversaId)
+    .order("id");
 
-  return linhas.map((l) => ({
-    id: l.id,
-    papel: l.papel,
-    conteudo: l.conteudo,
-    nivel: l.nivel,
-    auditoria: l.auditoria_json ? (JSON.parse(l.auditoria_json) as AuditoriaDeCitacoes) : null,
-    criado_em: l.criado_em,
+  return (data ?? []).map((l) => ({
+    id: l.id as number,
+    papel: l.papel as Mensagem["papel"],
+    conteudo: l.conteudo as string,
+    nivel: (l.nivel as string | null) ?? null,
+    auditoria: (l.auditoria as AuditoriaDeCitacoes | null) ?? null,
+    criado_em: l.criado_em as string,
   }));
 }
 
-export function conversasDoUsuario(
-  usuarioId: number,
-  ambiente: Ambiente,
-  limite = 25,
-) {
-  return db()
-    .prepare(
-      `SELECT id, titulo, disciplina_slug, criado_em
-         FROM conversas WHERE usuario_id = ? AND ambiente = ?
-        ORDER BY id DESC LIMIT ?`,
-    )
-    .all(usuarioId, ambiente, limite) as Array<{
+export async function conversasDoUsuario(ambiente: Ambiente, limite = 25) {
+  const supabase = await supabaseServidor();
+  const { data } = await supabase
+    .from("conversas")
+    .select("id, titulo, disciplina_slug, criado_em")
+    .eq("ambiente", ambiente)
+    .order("id", { ascending: false })
+    .limit(limite);
+
+  return (data ?? []) as Array<{
     id: number;
     titulo: string;
     disciplina_slug: string | null;
@@ -106,8 +103,7 @@ export function conversasDoUsuario(
 }
 
 /** Últimos turnos, para dar memória curta ao modelo sem estourar o contexto. */
-export function historicoParaModelo(conversaId: number, maxTurnos = 12) {
-  return mensagensDaConversa(conversaId)
-    .slice(-maxTurnos)
-    .map((m) => ({ papel: m.papel, conteudo: m.conteudo }));
+export async function historicoParaModelo(conversaId: number, maxTurnos = 12) {
+  const mensagens = await mensagensDaConversa(conversaId);
+  return mensagens.slice(-maxTurnos).map((m) => ({ papel: m.papel, conteudo: m.conteudo }));
 }

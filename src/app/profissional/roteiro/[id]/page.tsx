@@ -12,12 +12,12 @@ export default async function PaginaDoRoteiro({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const usuario = await exigirUsuario();
+  await exigirUsuario();
   const { id } = await params;
   const numero = Number(id);
   if (!Number.isInteger(numero)) notFound();
 
-  const registro = carregarRoteiro(numero, usuario.id);
+  const registro = await carregarRoteiro(numero);
   if (!registro) notFound();
 
   const { roteiro } = registro;

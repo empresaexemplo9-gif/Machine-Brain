@@ -31,9 +31,11 @@ const FERRAMENTAS = [
 
 export default async function PainelProfissional() {
   const usuario = await exigirUsuario();
-  const documentos = documentosDoUsuario(usuario.id, 5);
-  const roteiros = roteirosDoUsuario(usuario.id, 5);
-  const conversas = conversasDoUsuario(usuario.id, "profissional", 5);
+  const [documentos, roteiros, conversas] = await Promise.all([
+    documentosDoUsuario(5),
+    roteirosDoUsuario(5),
+    conversasDoUsuario("profissional", 5),
+  ]);
 
   return (
     <div className="space-y-10">

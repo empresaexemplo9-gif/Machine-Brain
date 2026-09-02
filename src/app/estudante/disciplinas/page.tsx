@@ -7,8 +7,8 @@ export const metadata: Metadata = { title: "Disciplinas" };
 
 export default async function PaginaDisciplinas() {
   const usuario = await exigirUsuario();
-  const perfil = perfilDoEstudante(usuario.id)!;
-  const minhas = disciplinasMatriculadas(usuario.id);
+  const perfil = (await perfilDoEstudante())!;
+  const minhas = await disciplinasMatriculadas();
   const matriculadas = minhas.map(disciplinaPorSlug).filter((d) => d !== undefined);
 
   const conjunto = new Set(minhas);

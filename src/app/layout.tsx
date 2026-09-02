@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Machine Brain — do primeiro período à advocacia",
-    template: "%s · Machine Brain",
+    default: "DRAP EDUCA — do primeiro período à advocacia",
+    template: "%s · DRAP EDUCA",
   },
   description:
     "Professor de Direito e assistente jurídico em um só lugar, com toda resposta ancorada em fonte oficial rastreável.",
