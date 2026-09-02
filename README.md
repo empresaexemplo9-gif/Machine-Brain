@@ -73,6 +73,8 @@ npm run verificar:conexao
 ```bash
 npm install
 cp .env.example .env.local     # preencha as variáveis do Supabase
+                               # (a chave é a publishable OU a anon,
+                               #  conforme o que o painel mostrar)
 npm run dev                    # http://localhost:3000
 ```
 
