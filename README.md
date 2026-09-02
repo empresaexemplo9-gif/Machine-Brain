@@ -48,12 +48,16 @@ linha" em vez de vazamento.
 ### 1. Criar o projeto Supabase
 
 No [painel do Supabase](https://supabase.com/dashboard), crie um projeto e
-aplique a migração:
+aplique as migrações de [`supabase/migrations/`](supabase/migrations) **na ordem
+do nome do arquivo**:
 
-- **Pelo SQL Editor:** cole o conteúdo de
-  [`supabase/migrations/20260902060000_esquema_inicial.sql`](supabase/migrations)
-  e execute.
+- **Pelo SQL Editor:** cole e execute uma de cada vez, da mais antiga para a mais
+  nova.
 - **Pela CLI:** `supabase link --project-ref <ref> && supabase db push`.
+
+As migrações não são idempotentes, de propósito: reaplicar a primeira num banco
+que já a recebeu falha com *"relation already exists"*. Isso é o comportamento
+correto de uma migração — se acontecer, ela já estava aplicada.
 
 Em **Authentication → Providers → Email**, desative *Confirm email* se quiser
 que o cadastro já entre com sessão (recomendado em desenvolvimento).

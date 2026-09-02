@@ -183,6 +183,31 @@ $$;
 commit;
 
 -- ---------------------------------------------------------------------------
+-- Cadastro sem e-mail não pode derrubar o trigger.
+--
+-- Conta de telefone, ou provedor OAuth que não devolve endereço, chega aqui com
+-- new.email NULL. Se o trigger deixar o nome virar NULL, o NOT NULL de
+-- perfis.nome aborta a transação e o cadastro INTEIRO falha.
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  insert into auth.users (id, email, raw_user_meta_data)
+    values ('33333333-3333-3333-3333-333333333333', null, '{}'::jsonb);
+exception when others then
+  raise exception 'cadastro sem e-mail derrubou o trigger: % (SQLSTATE %)', sqlerrm, sqlstate;
+end
+$$;
+
+do $$
+begin
+  if not exists (select 1 from public.perfis
+                  where id = '33333333-3333-3333-3333-333333333333') then
+    raise exception 'o perfil da conta sem e-mail não foi criado';
+  end if;
+end
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Guarda de regressão: nenhuma tabela nova pode entrar sem RLS e sem política.
 -- ---------------------------------------------------------------------------
 do $$
