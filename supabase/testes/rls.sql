@@ -81,7 +81,7 @@ declare
 begin
   foreach tabela in array array[
     'perfis_estudante', 'matriculas', 'conversas', 'mensagens',
-    'simulados', 'documentos', 'roteiros', 'planos_estudo'
+    'simulados', 'documentos', 'roteiros', 'planos_estudo', 'assinaturas'
   ] loop
     execute format('select count(*) from public.%I', tabela) into quantos;
     if quantos <> 0 then
@@ -254,6 +254,66 @@ begin
 end
 $$;
 commit;
+
+-- ---------------------------------------------------------------------------
+-- Assinaturas: quem paga não se concede período, e o plano efetivo é do dono.
+-- ---------------------------------------------------------------------------
+begin;
+-- Arthur ganhou uma semana; Beatriz não tem nada.
+insert into public.assinaturas
+  (usuario_id, valor_centavos, dias, expira_em, referencia, confirmada_por)
+values
+  ('11111111-1111-1111-1111-111111111111', 2500, 7, now() + interval '7 days',
+   'pix-teste-001', 'webhook:teste');
+
+do $$
+begin
+  -- Reentrega do mesmo pagamento não pode virar período dobrado.
+  begin
+    insert into public.assinaturas
+      (usuario_id, valor_centavos, dias, expira_em, referencia, confirmada_por)
+    values
+      ('11111111-1111-1111-1111-111111111111', 2500, 7, now() + interval '7 days',
+       'pix-teste-001', 'webhook:teste');
+    raise exception 'CRÉDITO DUPLICADO: a mesma referência de pagamento entrou duas vezes';
+  exception
+    when unique_violation then null;  -- resultado desejado
+  end;
+end
+$$;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "22222222-2222-2222-2222-222222222222"}';
+
+do $$
+begin
+  -- Beatriz não pode se dar uma assinatura.
+  begin
+    insert into public.assinaturas
+      (usuario_id, valor_centavos, dias, expira_em, referencia, confirmada_por)
+    values
+      ('22222222-2222-2222-2222-222222222222', 10000, 35, now() + interval '35 days',
+       'inventada', 'ela mesma');
+    raise exception 'ESCALADA: Beatriz se concedeu uma assinatura paga';
+  exception
+    when insufficient_privilege then null;  -- resultado desejado
+  end;
+
+  if public.plano_efetivo() <> 'gratuito' then
+    raise exception 'Beatriz, sem assinatura, deveria ser gratuito, veio %', public.plano_efetivo();
+  end if;
+end
+$$;
+
+set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111"}';
+do $$
+begin
+  if public.plano_efetivo() <> 'pro' then
+    raise exception 'Arthur, com assinatura válida, deveria ser pro, veio %', public.plano_efetivo();
+  end if;
+end
+$$;
+rollback;
 
 -- ---------------------------------------------------------------------------
 -- Guarda: o papel `anon` não pode ter privilégio nenhum em public.
