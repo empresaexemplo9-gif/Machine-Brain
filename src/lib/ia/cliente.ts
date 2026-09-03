@@ -2,6 +2,7 @@ import "server-only";
 
 import type { z } from "zod";
 import type { ModoIA } from "./modos";
+import type { Plano } from "../planos";
 import { escolherProvedor, modosDisponiveis, semNenhumaChave } from "./provedores";
 import { ErroDeGeracao, type OpcoesConversa, type Turno } from "./provedores/tipos";
 
@@ -35,11 +36,13 @@ export { modosDisponiveis };
 
 interface ComModo {
   modo?: ModoIA;
+  /** Plano do usuário. Ausente = gratuito, que é o mais restritivo. */
+  plano?: Plano;
 }
 
 /** Resposta completa, sem streaming. Usada em tarefas de fundo. */
 export async function responder(opcoes: OpcoesConversa & ComModo): Promise<string> {
-  const provedor = escolherProvedor(opcoes.modo);
+  const provedor = escolherProvedor(opcoes.modo, opcoes.plano);
   if (!provedor) return AVISO_DEMONSTRACAO;
   return provedor.responder(opcoes);
 }
@@ -48,7 +51,7 @@ export async function responder(opcoes: OpcoesConversa & ComModo): Promise<strin
 export async function* responderEmFluxo(
   opcoes: OpcoesConversa & ComModo,
 ): AsyncGenerator<string, void, unknown> {
-  const provedor = escolherProvedor(opcoes.modo);
+  const provedor = escolherProvedor(opcoes.modo, opcoes.plano);
   if (!provedor) {
     yield AVISO_DEMONSTRACAO;
     return;
@@ -70,10 +73,11 @@ export async function gerarEstruturado<T>(opcoes: {
   nomeFerramenta: string;
   descricaoFerramenta: string;
   modo?: ModoIA;
+  plano?: Plano;
   maxTokens?: number;
   temperatura?: number;
 }): Promise<T> {
-  const provedor = escolherProvedor(opcoes.modo);
+  const provedor = escolherProvedor(opcoes.modo, opcoes.plano);
   if (!provedor) {
     throw new ErroDeGeracao(
       "Esta funcionalidade precisa de um modelo. Configure uma chave gratuita " +

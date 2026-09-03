@@ -99,7 +99,7 @@ export default async function PaginaProfessor({
         {MODO_DEMONSTRACAO && <AvisoDeDemonstracao />}
 
         <Chat
-          modos={modosDisponiveis()}
+          modos={modosDisponiveis(usuario.plano)}
           key={conversaValida ? `c${conversaId}` : `n${params.disciplina ?? "geral"}`}
           ambiente="estudante"
           disciplinaSlug={disciplina?.slug ?? null}

@@ -125,6 +125,30 @@ ambiente errado, deploy não refeito, migração não aplicada, ou aplicada pela
 metade. É a mesma bateria de `npm run verificar:conexao` — mesmo módulo, para
 não divergirem — e não imprime valor de chave nenhuma.
 
+## Planos
+
+Duas contas, uma diferença: quais modos de IA aparecem.
+
+| Plano | Modos |
+| --- | --- |
+| **Gratuito** (padrão) | Estudo, Pesquisa, Debate — os três com nível gratuito no provedor |
+| **Pro** | os três acima + Parecer (Anthropic) |
+
+O Parecer usa API paga desde a primeira chamada, então oferecê-lo no plano
+gratuito seria pôr na tela um botão que gasta dinheiro da plataforma.
+
+O controle é em duas camadas, e as duas importam. A interface **não oferece** o
+modo que o plano não cobre; o servidor **não entrega**, porque `escolherProvedor`
+filtra pelo plano lido da sessão — nunca pelo corpo da requisição.
+
+No banco há uma terceira: `perfis.plano` não é escrita pelo usuário. A política
+de RLS autoriza a pessoa a alterar a própria linha, e é isso que se quer para
+nome e ambiente — quem barra a coluna `plano` é um **grant por coluna**. Sem
+ele, qualquer um se promovia a Pro com uma requisição usando a chave pública que
+vai no bundle. RLS decide *quais linhas*; grant de coluna decide *quais campos*.
+`npm run verificar:rls` prova as duas coisas, inclusive que o usuário continua
+podendo trocar o próprio nome.
+
 ## Modos de IA
 
 São quatro, e **basta um**. O usuário troca no seletor do chat; a plataforma só

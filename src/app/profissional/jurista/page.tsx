@@ -103,7 +103,7 @@ export default async function PaginaJurista({
         {MODO_DEMONSTRACAO && <AvisoDeDemonstracao />}
 
         <Chat
-          modos={modosDisponiveis()}
+          modos={modosDisponiveis(usuario.plano)}
           key={conversaValida ? `c${conversaId}` : `n${documentoId ?? "geral"}`}
           ambiente="profissional"
           documentoId={documento?.id ?? null}

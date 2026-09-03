@@ -208,6 +208,79 @@ end
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Escalada de plano: o usuário NÃO pode se promover a 'pro'.
+--
+-- Este é o caso que o RLS sozinho não pega. A política "perfil próprio"
+-- autoriza Beatriz a atualizar a linha dela — e é isso que se quer, para nome e
+-- ambiente. Quem barra a coluna `plano` é o grant por coluna. Sem ele, uma
+-- requisição com a chave pública (que vai no bundle do navegador) daria acesso
+-- ao modo pago de graça.
+-- ---------------------------------------------------------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub": "22222222-2222-2222-2222-222222222222"}';
+
+do $$
+begin
+  begin
+    update public.perfis set plano = 'pro'
+     where id = '22222222-2222-2222-2222-222222222222';
+    raise exception 'ESCALADA: Beatriz se promoveu ao plano pago sozinha';
+  exception
+    when insufficient_privilege then null;  -- resultado desejado
+  end;
+end
+$$;
+
+-- O que é dela, ela continua podendo mudar. Um grant apertado demais quebraria
+-- o perfil e ninguém notaria até um usuário tentar trocar o próprio nome.
+update public.perfis set nome = 'Beatriz Lima'
+ where id = '22222222-2222-2222-2222-222222222222';
+
+do $$
+declare atual text;
+begin
+  select nome into atual from public.perfis
+   where id = '22222222-2222-2222-2222-222222222222';
+  if atual is distinct from 'Beatriz Lima' then
+    raise exception 'o grant por coluna impediu o usuário de trocar o próprio nome: %', atual;
+  end if;
+
+  select plano into atual from public.perfis
+   where id = '22222222-2222-2222-2222-222222222222';
+  if atual is distinct from 'gratuito' then
+    raise exception 'plano deveria ter continuado gratuito, veio %', atual;
+  end if;
+end
+$$;
+commit;
+
+-- ---------------------------------------------------------------------------
+-- Guarda: o papel `anon` não pode ter privilégio nenhum em public.
+--
+-- Lido de pg_class.relacl, e NÃO de information_schema.role_table_grants: essa
+-- view só devolve os grants que o usuário conectado enxerga, e por isso já
+-- respondeu "nenhum" num banco onde a ACL dizia anon=arwdDxtm. Auditar
+-- privilégio pela view errada é pior do que não auditar — dá um verde falso.
+-- ---------------------------------------------------------------------------
+do $$
+declare abertas text;
+begin
+  select string_agg(format('%s(%s)', c.relname, a.privilege_type), ', ')
+    into abertas
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+   cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
+   where n.nspname = 'public'
+     and c.relkind = 'r'
+     and a.grantee = 'anon'::regrole;
+  if abertas is not null then
+    raise exception 'anon tem privilégio em public (a chave pública vai no navegador): %', abertas;
+  end if;
+end
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Guarda de regressão: nenhuma tabela nova pode entrar sem RLS e sem política.
 -- ---------------------------------------------------------------------------
 do $$

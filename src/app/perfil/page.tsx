@@ -5,6 +5,7 @@ import { NIVEIS_EXPLICACAO, disciplinaPorSlug } from "@/lib/curriculo";
 import { MODO_DEMONSTRACAO } from "@/lib/ia/cliente";
 import { CATALOGO } from "@/lib/fontes";
 import { Cabecalho } from "@/components/Cabecalho";
+import { PLANOS } from "@/lib/planos";
 
 /**
  * Sempre dinâmica: esta rota depende da sessão.
@@ -33,6 +34,13 @@ export default async function PaginaDePerfil() {
         <header>
           <h1 className="text-2xl font-bold tracking-tight">Seu perfil</h1>
           <p className="mt-1 text-sm text-[var(--color-texto-suave)]">{usuario.email}</p>
+          <p className="mt-2 text-xs text-[var(--color-texto-fraco)]">
+            Plano{" "}
+            <span className="font-semibold text-[var(--color-ouro)]">
+              {PLANOS[usuario.plano].rotulo}
+            </span>{" "}
+            — {PLANOS[usuario.plano].descricao}
+          </p>
         </header>
 
         <section className="cartao">

@@ -138,6 +138,9 @@ export async function POST(requisicao: Request) {
           turnos,
           maxTokens: 2048,
           modo: entrada.modo,
+          // O plano vem da sessão, nunca do corpo da requisição: é ele que
+          // decide se o modo pedido pode ser entregue.
+          plano: usuario.plano,
         })) {
           completa += pedaco;
           enviar({ tipo: "texto", valor: pedaco });

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { PLANO_PADRAO, ehPlano, type Plano } from "./planos";
 import { supabaseServidor } from "./supabase/servidor";
 import { SUPABASE_CONFIGURADO } from "./supabase/config";
 
@@ -19,6 +20,8 @@ export interface Usuario {
   email: string;
   nome: string;
   ambiente: "estudante" | "profissional";
+  /** Decide quais modos de IA a conta enxerga. Ver src/lib/planos.ts. */
+  plano: Plano;
 }
 
 export interface PerfilEstudante {
@@ -117,7 +120,7 @@ export async function usuarioAtual(): Promise<Usuario | null> {
 
   const { data: perfil } = await supabase
     .from("perfis")
-    .select("nome, ambiente")
+    .select("nome, ambiente, plano")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -128,6 +131,9 @@ export async function usuarioAtual(): Promise<Usuario | null> {
     // criada antes da migração do trigger.
     nome: perfil?.nome || (user.user_metadata?.nome as string) || user.email?.split("@")[0] || "",
     ambiente: (perfil?.ambiente as Usuario["ambiente"]) ?? "estudante",
+    // Plano desconhecido vira o mais restritivo: um erro de leitura não pode
+    // liberar o modo pago.
+    plano: ehPlano(perfil?.plano) ? perfil.plano : PLANO_PADRAO,
   };
 }
 

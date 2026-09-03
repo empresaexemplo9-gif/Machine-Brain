@@ -14,7 +14,7 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
-import { PROVEDORES } from "../src/lib/ia/provedores";
+import { PROVEDORES, escolherProvedor, modosDisponiveis } from "../src/lib/ia/provedores";
 import {
   ErroDeProvedor,
   filtrarRaciocinio,
@@ -386,6 +386,34 @@ async function main(): Promise<void> {
     const escolhido = await PROVEDORES.estudo.resolverModelo();
     if (escolhido !== "modelo-que-eu-escolhi") throw new Error(`escolheu: ${escolhido}`);
     delete process.env.MB_MODEL_GROQ;
+  });
+
+  console.log("\nplano da conta");
+
+  await checar("plano gratuito não enxerga o modo pago", async () => {
+    process.env.ANTHROPIC_API_KEY = "teste";
+    const modos = modosDisponiveis("gratuito");
+    if (modos.includes("parecer")) throw new Error(`ofereceu: ${modos.join(", ")}`);
+    if (modos.length !== 3) throw new Error(`esperava os 3 gratuitos, veio: ${modos.join(", ")}`);
+  });
+
+  await checar("plano pro enxerga os quatro", async () => {
+    const modos = modosDisponiveis("pro");
+    if (!modos.includes("parecer")) throw new Error(`faltou o pago: ${modos.join(", ")}`);
+  });
+
+  await checar("conta gratuita PEDINDO o modo pago não o recebe", async () => {
+    // O caminho que a interface não oferece, mas que uma requisição montada à
+    // mão tentaria. Quem decide é o servidor, não o corpo do POST.
+    const provedor = escolherProvedor("parecer", "gratuito");
+    if (provedor?.id === "parecer") throw new Error("entregou o modo pago a uma conta gratuita");
+    if (!provedor) throw new Error("deveria ter caído num modo gratuito, não em nenhum");
+  });
+
+  await checar("conta pro PEDINDO o modo pago o recebe", async () => {
+    const provedor = escolherProvedor("parecer", "pro");
+    if (provedor?.id !== "parecer") throw new Error(`veio: ${provedor?.id}`);
+    delete process.env.ANTHROPIC_API_KEY;
   });
 
   await checar("sem chave nenhuma, nenhum provedor se diz disponível", async () => {

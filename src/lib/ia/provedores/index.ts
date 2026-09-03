@@ -1,6 +1,7 @@
 import "server-only";
 
 import { MODOS_IA, descreverModo, type ModoIA } from "../modos";
+import { PLANO_PADRAO, modosDoPlano, type Plano } from "../../planos";
 import { criarProvedorOpenAI } from "./openai-compat";
 import { provedorGemini } from "./gemini";
 import { provedorAnthropic } from "./anthropic";
@@ -50,14 +51,26 @@ export const PROVEDORES: Record<ModoIA, Provedor> = {
   parecer: provedorAnthropic,
 };
 
-/** Os modos com chave configurada, na ordem de preferência. */
-export function modosDisponiveis(): ModoIA[] {
-  return MODOS_IA.filter((m) => PROVEDORES[m.id].disponivel()).map((m) => m.id);
+/**
+ * Modos que este usuário pode usar: com chave configurada E autorizados pelo
+ * plano. As duas condições, sempre — chave sem plano oferece o que o usuário
+ * não comprou; plano sem chave oferece o que não responde.
+ */
+export function modosDisponiveis(plano: Plano = PLANO_PADRAO): ModoIA[] {
+  const doPlano = modosDoPlano(plano);
+  return MODOS_IA.filter(
+    (m) => doPlano.includes(m.id) && PROVEDORES[m.id].disponivel(),
+  ).map((m) => m.id);
 }
 
-/** Nenhuma chave em lugar nenhum: a plataforma roda em demonstração. */
+/**
+ * Nenhuma chave em lugar nenhum: a plataforma roda em demonstração.
+ *
+ * Ignora o plano de propósito: o aviso de demonstração é sobre a configuração
+ * do deploy, não sobre o que este usuário comprou.
+ */
 export function semNenhumaChave(): boolean {
-  return modosDisponiveis().length === 0;
+  return MODOS_IA.every((m) => !PROVEDORES[m.id].disponivel());
 }
 
 /**
@@ -68,9 +81,12 @@ export function semNenhumaChave(): boolean {
  * e a interface só oferece os disponíveis, então isso é rede de proteção para
  * requisição fora dela, não caminho normal.
  */
-export function escolherProvedor(pedido?: ModoIA): Provedor | null {
-  const disponiveis = modosDisponiveis();
+export function escolherProvedor(pedido?: ModoIA, plano: Plano = PLANO_PADRAO): Provedor | null {
+  const disponiveis = modosDisponiveis(plano);
   if (disponiveis.length === 0) return null;
+  // Um pedido fora da lista cai no primeiro permitido em vez de virar erro. É
+  // aqui que o plano é REALMENTE aplicado: a interface não oferece o modo pago
+  // a quem não tem, mas quem monta a requisição à mão também não o alcança.
   const escolhido = pedido && disponiveis.includes(pedido) ? pedido : disponiveis[0];
   return PROVEDORES[escolhido];
 }
