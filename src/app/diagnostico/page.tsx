@@ -4,6 +4,7 @@ import { Logo } from "@/components/Logo";
 import { diagnosticar, type Estado } from "@/lib/supabase/diagnostico";
 import { estadoDosModos } from "@/lib/ia/provedores";
 import { descreverModo } from "@/lib/ia/modos";
+import { TestarModo } from "./TestarModo";
 
 /**
  * Página de diagnóstico da configuração do deploy.
@@ -111,6 +112,7 @@ export default async function PaginaDeDiagnostico() {
               <span className="min-w-0">
                 <span className="break-words">
                   {m.rotulo} — {m.provedor}
+                  <TestarModo modo={m.id} disponivel={m.disponivel} />
                 </span>
                 <span className="block break-words text-xs text-[var(--color-texto-suave)]">
                   {m.disponivel ? (

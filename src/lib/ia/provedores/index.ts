@@ -22,6 +22,7 @@ export const PROVEDORES: Record<ModoIA, Provedor> = {
     variavelBase: "MB_BASE_GROQ",
     variavelChave: "GROQ_API_KEY",
     variavelModelo: "MB_MODEL_GROQ",
+    prefixoAjustes: "MB_GROQ",
     modeloPadrao: "llama-3.3-70b-versatile",
   }),
   pesquisa: provedorGemini,
@@ -32,6 +33,7 @@ export const PROVEDORES: Record<ModoIA, Provedor> = {
     variavelBase: "MB_BASE_OPENROUTER",
     variavelChave: "OPENROUTER_API_KEY",
     variavelModelo: "MB_MODEL_OPENROUTER",
+    prefixoAjustes: "MB_OPENROUTER",
     modeloPadrao: "meta-llama/llama-3.3-70b-instruct:free",
     // O OpenRouter usa estes cabeçalhos para atribuir o tráfego à aplicação.
     cabecalhosExtra: {

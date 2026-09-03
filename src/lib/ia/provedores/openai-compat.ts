@@ -5,7 +5,9 @@ import {
   ErroDeGeracao,
   erroDaResposta,
   extrairJson,
+  filtrarRaciocinio,
   linhasSSE,
+  semRaciocinio,
   validar,
   type OpcoesConversa,
   type OpcoesEstruturado,
@@ -37,6 +39,8 @@ interface Config {
   variavelBase: string;
   variavelChave: string;
   variavelModelo: string;
+  /** Prefixo das variáveis de ajuste fino (_TOP_P, _REASONING_EFFORT, …). */
+  prefixoAjustes: string;
   modeloPadrao: string;
   cabecalhosExtra?: Record<string, string>;
 }
@@ -69,6 +73,33 @@ export function criarProvedorOpenAI(config: Config): Provedor {
   const base = () =>
     ((process.env[config.variavelBase] ?? "").trim() || config.base).replace(/\/$/, "");
 
+  /**
+   * Ajustes que só fazem sentido em alguns modelos, todos opcionais.
+   *
+   * `reasoning_format: hidden` é o que impede o bloco <think> de um Qwen3 ou
+   * R1 de chegar à tela. Provedor que não conhece o parâmetro costuma ignorá-lo;
+   * o filtro em filtrarRaciocinio cobre esse caso.
+   */
+  function extras(): Record<string, unknown> {
+    const numero = (nome: string) => {
+      const bruto = (process.env[nome] ?? "").trim();
+      if (!bruto) return undefined;
+      const valor = Number(bruto);
+      return Number.isFinite(valor) ? valor : undefined;
+    };
+    const texto = (nome: string) => (process.env[nome] ?? "").trim() || undefined;
+
+    const campos: Record<string, unknown> = {
+      top_p: numero(`${config.prefixoAjustes}_TOP_P`),
+      reasoning_effort: texto(`${config.prefixoAjustes}_REASONING_EFFORT`),
+      reasoning_format: texto(`${config.prefixoAjustes}_REASONING_FORMAT`),
+    };
+    for (const chave of Object.keys(campos)) {
+      if (campos[chave] === undefined) delete campos[chave];
+    }
+    return campos;
+  }
+
   async function chamar(corpo: Record<string, unknown>, fluxo: boolean): Promise<Response> {
     const resposta = await fetch(`${base()}/chat/completions`, {
       method: "POST",
@@ -77,7 +108,7 @@ export function criarProvedorOpenAI(config: Config): Provedor {
         "content-type": "application/json",
         ...(config.cabecalhosExtra ?? {}),
       },
-      body: JSON.stringify({ model: modelo(), ...corpo, stream: fluxo }),
+      body: JSON.stringify({ model: modelo(), ...extras(), ...corpo, stream: fluxo }),
       signal: AbortSignal.timeout(fluxo ? 120_000 : 60_000),
     });
     if (!resposta.ok) throw await erroDaResposta(config.id, config.rotulo, resposta);
@@ -100,7 +131,7 @@ export function criarProvedorOpenAI(config: Config): Provedor {
         false,
       );
       const dados = respostaSchema.parse(await resposta.json());
-      return dados.choices[0].message.content ?? "";
+      return semRaciocinio(dados.choices[0].message.content ?? "");
     },
 
     async *responderEmFluxo(opcoes: OpcoesConversa) {
@@ -114,18 +145,23 @@ export function criarProvedorOpenAI(config: Config): Provedor {
       );
       if (!resposta.body) throw new ErroDeGeracao(`O modo ${config.rotulo} não abriu o fluxo.`);
 
-      for await (const dado of linhasSSE(resposta.body)) {
-        if (dado === "[DONE]") return;
-        let pedaco;
-        try {
-          pedaco = pedacoSchema.parse(JSON.parse(dado));
-        } catch {
-          // Comentários de keep-alive e eventos de metadados entram aqui.
-          continue;
+      const corpoDoFluxo = resposta.body;
+      async function* bruto(): AsyncGenerator<string, void, unknown> {
+        for await (const dado of linhasSSE(corpoDoFluxo)) {
+          if (dado === "[DONE]") return;
+          let pedaco;
+          try {
+            pedaco = pedacoSchema.parse(JSON.parse(dado));
+          } catch {
+            // Comentários de keep-alive e eventos de metadados entram aqui.
+            continue;
+          }
+          const texto = pedaco.choices[0].delta.content;
+          if (texto) yield texto;
         }
-        const texto = pedaco.choices[0].delta.content;
-        if (texto) yield texto;
       }
+
+      yield* filtrarRaciocinio(bruto());
     },
 
     async gerarEstruturado<T>(opcoes: OpcoesEstruturado<T>): Promise<T> {
@@ -166,7 +202,9 @@ export function criarProvedorOpenAI(config: Config): Provedor {
       if (chamada) return validar(opcoes.schema, JSON.parse(chamada.function.arguments));
 
       // Modelo sem suporte a ferramenta: o JSON veio no texto, se veio.
-      if (mensagem.content) return validar(opcoes.schema, extrairJson(mensagem.content));
+      if (mensagem.content) {
+        return validar(opcoes.schema, extrairJson(semRaciocinio(mensagem.content)));
+      }
 
       throw new ErroDeGeracao(
         `O modo ${config.rotulo} não retornou a estrutura solicitada. O modelo ` +

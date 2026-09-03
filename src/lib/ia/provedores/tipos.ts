@@ -111,6 +111,95 @@ export async function* linhasSSE(corpo: ReadableStream<Uint8Array>): AsyncGenera
 }
 
 /**
+ * Remove o bloco de raciocínio que modelos "thinking" emitem antes da resposta.
+ *
+ * Qwen3, DeepSeek-R1 e afins escrevem <think>…</think> no meio do texto. Numa
+ * plataforma jurídica isso é grave por dois motivos, não um: o aluno lê o
+ * rascunho do modelo como se fosse a resposta, e o auditor de citações passa a
+ * examinar o rascunho — onde o modelo pensa em voz alta sobre artigos que
+ * depois descarta. Um "Art. 42" cogitado e abandonado viraria citação não
+ * verificada na cara do usuário.
+ *
+ * Onde o provedor sabe suprimir o bloco na origem, ele é configurado para
+ * fazê-lo. Isto aqui é a rede embaixo: vale para qualquer modelo, inclusive os
+ * que ignoram o parâmetro.
+ */
+export function semRaciocinio(texto: string): string {
+  return texto.replace(/<think>[\s\S]*?<\/think>/g, "").replace(/^\s+/, "");
+}
+
+/** Início de tag que pode estar cortado na fronteira entre dois pedaços. */
+function tamanhoDoRabo(texto: string, alvo: string): number {
+  const max = Math.min(texto.length, alvo.length - 1);
+  for (let n = max; n > 0; n -= 1) {
+    if (alvo.startsWith(texto.slice(texto.length - n))) return n;
+  }
+  return 0;
+}
+
+/**
+ * Versão em fluxo do acima.
+ *
+ * O caso que exige máquina de estado: `<think>` pode chegar partido em dois
+ * pedaços ("<thi" + "nk>"). Por isso o fim do buffer que ainda pode ser começo
+ * de tag fica retido até o pedaço seguinte decidir — emitir antes seria mostrar
+ * "<thi" na tela.
+ */
+export async function* filtrarRaciocinio(
+  fonte: AsyncGenerator<string, void, unknown>,
+): AsyncGenerator<string, void, unknown> {
+  const ABRE = "<think>";
+  const FECHA = "</think>";
+
+  let buffer = "";
+  let dentro = false;
+  let algoEmitido = false;
+
+  for await (const pedaco of fonte) {
+    buffer += pedaco;
+
+    for (;;) {
+      if (dentro) {
+        const fim = buffer.indexOf(FECHA);
+        if (fim === -1) {
+          // Segura só o que pode ser começo de </think>; o resto é raciocínio.
+          buffer = buffer.slice(-(FECHA.length - 1));
+          break;
+        }
+        buffer = buffer.slice(fim + FECHA.length);
+        dentro = false;
+        continue;
+      }
+
+      const inicio = buffer.indexOf(ABRE);
+      if (inicio === -1) break;
+
+      const antes = buffer.slice(0, inicio);
+      if (antes) {
+        algoEmitido = true;
+        yield antes;
+      }
+      buffer = buffer.slice(inicio + ABRE.length);
+      dentro = true;
+    }
+
+    if (!dentro) {
+      const reter = tamanhoDoRabo(buffer, ABRE);
+      const pronto = buffer.slice(0, buffer.length - reter);
+      buffer = buffer.slice(buffer.length - reter);
+      // A resposta costuma começar com quebras de linha depois do bloco.
+      const saida = algoEmitido ? pronto : pronto.replace(/^\s+/, "");
+      if (saida) {
+        algoEmitido = true;
+        yield saida;
+      }
+    }
+  }
+
+  if (!dentro && buffer) yield algoEmitido ? buffer : buffer.replace(/^\s+/, "");
+}
+
+/**
  * Extrai o JSON de uma resposta em texto.
  *
  * Nem todo modelo aberto respeita "responda só com JSON": muitos embrulham em

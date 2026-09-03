@@ -15,7 +15,11 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { z } from "zod";
 import { PROVEDORES } from "../src/lib/ia/provedores";
-import { ErroDeProvedor } from "../src/lib/ia/provedores/tipos";
+import {
+  ErroDeProvedor,
+  filtrarRaciocinio,
+  semRaciocinio,
+} from "../src/lib/ia/provedores/tipos";
 
 const PORTA = Number(process.env.MB_PORTA_PROVEDORES ?? 3411);
 
@@ -77,6 +81,23 @@ const servidor = createServer(async (req, res) => {
     const mensagens = enviado.messages as { role: string; content: string }[];
     if (mensagens[0]?.role !== "system") {
       return json(res, 400, { error: { message: "faltou o prompt de sistema" } });
+    }
+
+    if (url.pathname.includes("/cenario-raciocinio/")) {
+      if (enviado.stream === true) {
+        // A tag chega PARTIDA entre pedaços: é o caso que quebra parser ingênuo.
+        return sse(res, [
+          JSON.stringify({ choices: [{ delta: { content: "<thi" } }] }),
+          JSON.stringify({ choices: [{ delta: { content: "nk>O usuário quer o art. 42" } }] }),
+          JSON.stringify({ choices: [{ delta: { content: ". Não, é o 5º.</thi" } }] }),
+          JSON.stringify({ choices: [{ delta: { content: "nk>\n\nArt. 5º " } }] }),
+          JSON.stringify({ choices: [{ delta: { content: "da CF/88." } }] }),
+          "[DONE]",
+        ]);
+      }
+      return json(res, 200, {
+        choices: [{ message: { content: "<think>rascunho</think>\n\nresposta completa" } }],
+      });
     }
 
     if (enviado.stream === true) {
@@ -236,6 +257,46 @@ async function main(): Promise<void> {
       }
     }
     process.env.MB_BASE_GROQ = base;
+  });
+
+  await checar("bloco de raciocínio não chega ao texto (resposta completa)", async () => {
+    process.env.MB_BASE_GROQ = `${base}/cenario-raciocinio`;
+    const texto = await PROVEDORES.estudo.responder(conversa);
+    if (texto !== "resposta completa") throw new Error(`veio: ${JSON.stringify(texto)}`);
+    process.env.MB_BASE_GROQ = base;
+  });
+
+  await checar("bloco de raciocínio não chega ao texto (fluxo, tag partida)", async () => {
+    process.env.MB_BASE_GROQ = `${base}/cenario-raciocinio`;
+    const texto = await juntar(PROVEDORES.estudo.responderEmFluxo(conversa));
+    if (texto !== "Art. 5º da CF/88.") throw new Error(`veio: ${JSON.stringify(texto)}`);
+    process.env.MB_BASE_GROQ = base;
+  });
+
+  await checar("o artigo cogitado e descartado não vaza para a auditoria", async () => {
+    process.env.MB_BASE_GROQ = `${base}/cenario-raciocinio`;
+    const texto = await juntar(PROVEDORES.estudo.responderEmFluxo(conversa));
+    // O rascunho menciona "art. 42" e desiste. Se vazasse, o auditor marcaria
+    // a resposta como não verificada por causa de algo que o modelo descartou.
+    if (texto.includes("42")) throw new Error(`o rascunho vazou: ${JSON.stringify(texto)}`);
+    process.env.MB_BASE_GROQ = base;
+  });
+
+  await checar("o filtro não engole texto de resposta sem raciocínio", async () => {
+    async function* fonte() {
+      yield "Art. 5";
+      yield "º < 6º, e ";
+      yield "isso não é tag.";
+    }
+    const partes: string[] = [];
+    for await (const p of filtrarRaciocinio(fonte())) partes.push(p);
+    const texto = partes.join("");
+    if (texto !== "Art. 5º < 6º, e isso não é tag.") {
+      throw new Error(`veio: ${JSON.stringify(texto)}`);
+    }
+    if (semRaciocinio("sem bloco aqui") !== "sem bloco aqui") {
+      throw new Error("semRaciocinio alterou texto que não tinha bloco");
+    }
   });
 
   await checar("sem chave nenhuma, nenhum provedor se diz disponível", async () => {

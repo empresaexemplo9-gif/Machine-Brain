@@ -152,6 +152,19 @@ pede ferramenta onde há suporte e aceita JSON no texto onde não há — modelo
 aberto gratuito nem sempre sabe chamar ferramenta. Nos dois caminhos o resultado
 passa pelo mesmo schema Zod antes de virar dado: ou o tipo certo, ou erro.
 
+Modelos de raciocínio (Qwen3, DeepSeek-R1) emitem `<think>…</think>` junto da
+resposta. Isso é removido em dois lugares: pelo parâmetro `reasoning_format` do
+provedor, quando ele o conhece, e por um filtro próprio que funciona em fluxo —
+inclusive quando a tag chega partida entre dois pedaços do stream. O motivo de
+insistir tanto é que o rascunho não é só feio: nele o modelo cogita artigos que
+depois descarta, e um "Art. 42" abandonado no meio do raciocínio viraria citação
+não verificada na cara do usuário.
+
+Em `/diagnostico` há um botão **testar agora** por modo, que faz uma chamada
+real a partir do deploy e mostra a resposta do provedor. É como se descobre, sem
+adivinhação, se o problema é chave recusada, modelo inexistente ou cota
+estourada — três causas com o mesmo sintoma, que o provedor distingue.
+
 Se um modo estourar o limite gratuito, a mensagem diz isso e sugere trocar. A
 plataforma **não** troca sozinha: o usuário escolheu "Debate" porque queria
 aquele ponto de vista, e substituí-lo em silêncio seria entregar outra coisa com
