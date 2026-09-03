@@ -26,6 +26,12 @@ A arquitetura foi montada em volta disso:
    como **não verificado** na frente do usuário.
 3. **O que não existe, não se preenche.** Jurisprudência de acórdãos ainda não
    está indexada — a plataforma diz isso em vez de fabricar número de processo.
+   A auditoria também sinaliza tese atribuída a autor ("como ensina Fulano"),
+   número de processo e estatística de instituição quando a obra não está no
+   catálogo. Essas três são mais perigosas que artigo inventado, e por um motivo
+   prático: o aluno confere um artigo no Planalto em trinta segundos; um livro
+   que ele não tem, um acórdão que ele não vai puxar e um percentual atribuído
+   ao CNJ, provavelmente nunca.
 4. **Sem chave de API, nada é fabricado.** A aplicação sobe em modo demonstração
    e avisa que o modelo está desligado.
 
@@ -212,6 +218,16 @@ Postgres descartável, recria localmente o que o Supabase provê pronto (schema
 lê, insere, altera nem apaga a linha de outro — por nenhum caminho. Também falha
 se alguma tabela nova entrar sem RLS ou sem política. Não precisa de rede nem de
 projeto Supabase.
+
+**`verificar:catalogo`** confere as fontes e a auditoria. Nas fontes: id único,
+texto transcrito, URL oficial e data de conferência; e, para doutrina, artigo e
+dado, autoria mais um localizador que **não dá para inventar** — ISBN com dígito
+verificador que fecha, DOI no formato `10.XXXX/sufixo`, ou URL https. Um ISBN
+plausível mas falso é rejeitado pela aritmética, sem depender de alguém reparar.
+Na auditoria: 9 afirmações que precisam ser sinalizadas e 7 frases corretas que
+não podem ser. As duas listas existem porque as duas falhas custam caro em
+direções opostas — deixar passar entrega invenção com selo de verificada; marcar
+demais destrói a confiança no selo.
 
 **`verificar:provedores`** sobe um servidor local que responde como Groq,
 OpenRouter e Gemini respondem, e faz os provedores de verdade falarem com ele.

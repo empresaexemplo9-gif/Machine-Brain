@@ -159,10 +159,36 @@ export const PADRAO_CITACAO = /\[\[fonte:([a-z0-9-]+)\]\]/gi;
  * fonte — é exatamente o caso que a interface precisa sinalizar.
  */
 const REFERENCIAS_SOLTAS: RegExp[] = [
+  // --- Dispositivos de lei ---
   /\bart(?:igo)?s?\.?\s*\d+[º°]?/gi,
   /\bs[úu]mulas?\s+(?:vinculantes?\s+)?n?[º°]?\s*\d+/gi,
   /\blei\s+n?[º°]?\s*[\d.]+\s*\/\s*\d{2,4}/gi,
   /\bdecreto[- ]lei\s+n?[º°]?\s*[\d.]+/gi,
+
+  // --- Doutrina ---
+  // Atribuir uma tese a um autor é afirmação verificável, e inventar autor é
+  // mais difícil de conferir do que inventar artigo: o aluno não tem o livro
+  // na mão. Casa só com verbo doutrinário explícito, para não punir a resposta
+  // que apenas explica ("a doutrina" sozinho não basta).
+  /\b(?:como|conforme|segundo)\s+(?:ensina|leciona|sustenta|observa|adverte|anota|defende)\b[^.;:!?]{0,70}/gi,
+  /\bna\s+(?:li[çc][ãa]o|vis[ãa]o|opini[ãa]o|doutrina)\s+de\s+[^.;:!?]{0,70}/gi,
+  /\b(?:a\s+)?doutrina\s+(?:majorit[áa]ria|dominante|cl[áa]ssica|moderna|p[áa]tria|tradicional)/gi,
+  /\bsegundo\s+(?:o|a)\s+(?:autor|autora|professor|professora|jurista|doutrinador|doutrinadora)\b/gi,
+
+  // --- Jurisprudência ---
+  // Número de processo é o campo que um modelo fabrica com mais confiança, e o
+  // que mais parece verdade. A plataforma não indexa acórdãos: qualquer número
+  // que apareça está, por construção, sem lastro.
+  /\b(?:RE|REsp|AREsp|HC|RHC|MS|ADI|ADPF|ADC|AgRg|AgInt|EDcl)\s*n?[º°]?\s*[\d][\d.\/-]{2,}/g,
+  /\bac[óo]rd[ãa]o\s+n?[º°]?\s*[\d][\d.\/-]*/gi,
+  /\b(?:julgad[oa]|decidid[oa]|decidiu|entendeu|firmou\s+(?:o\s+)?entendimento)\s+(?:pel[oa]|n[oa])\s+(?:STF|STJ|TST|TSE)\b[^.;:!?]{0,50}/gi,
+  // O tribunal também aparece antes do verbo: "o STF já decidiu que…".
+  /\b(?:o\s+)?(?:STF|STJ|TST|TSE)\s+(?:j[áa]\s+)?(?:decidiu|entendeu|firmou|consolidou|pacificou|assentou|reconheceu)\b[^.;:!?]{0,50}/gi,
+
+  // --- Dados e pesquisa ---
+  // Número atribuído a instituição é o mesmo problema com outra roupa.
+  /\b(?:segundo|conforme|de\s+acordo\s+com)\s+(?:dados|pesquisa|levantamento|estudo|relat[óo]rio|estat[íi]sticas?)\b[^.;:!?]{0,60}/gi,
+  /\b(?:segundo|conforme|de\s+acordo\s+com)\s+(?:o\s+|a\s+)?(?:CNJ|IBGE|IPEA|OAB|DataFolha|Datafolha)\b/gi,
 ];
 
 export function extrairCitacoes(texto: string): string[] {
