@@ -14,6 +14,32 @@ ambientes que dividem conta, histórico e assinatura.
 | Diagnóstico de desempenho por disciplina | Legislação aplicável ao caso, com fonte |
 | Plano de estudos derivado dos pontos fracos | Minutas para revisão, nunca peça pronta |
 
+## Identidade visual
+
+Navy é a estrutura — fundo, superfícies, bordas. Dourado é a ação — botão, link,
+foco, o que está ativo. Preto aparece como profundidade e como o texto sobre o
+dourado; branco puro fica reservado à marca e aos títulos.
+
+Botão dourado com texto preto, e não navy com texto branco, por um motivo
+mensurável: o fundo já é navy, então botão navy sobre fundo navy some. Dourado
+sobre navy dá 8,4:1 de contraste e preto sobre dourado dá 8,9:1 — os dois passam
+com folga em AA, inclusive em texto pequeno. Branco sobre dourado daria ~2:1 e
+reprovaria.
+
+Os ícones são desenhados em `src/components/icones.tsx`, não são emoji. Emoji
+muda de desenho conforme o sistema operacional (a balança do Windows não é a do
+Android), não aceita a cor da marca e destoa em peso do resto. Estes herdam a cor
+por `currentColor` e compartilham a mesma espessura de traço — é o que faz um
+conjunto parecer um conjunto. São onze: balança, martelo, coluna, livro,
+processo, bússola, birrete, pena, selo, questões e plano.
+
+`src/components/Fachada.tsx` é a ilustração do herói — frontão, seis colunas,
+escadaria e a balança no tímpano, em vetor. Uma armadilha ficou registrada no
+próprio arquivo: o gradiente precisa de `gradientUnits="userSpaceOnUse"`. No
+padrão (`objectBoundingBox`) as coordenadas são relativas à caixa de cada
+elemento, e uma linha reta horizontal tem caixa de altura zero — o gradiente
+degenera e a linha não pinta. Na primeira versão só o telhado aparecia.
+
 ## A regra que sustenta o produto
 
 O maior risco de uma ferramenta jurídica com IA é inventar lei com confiança.

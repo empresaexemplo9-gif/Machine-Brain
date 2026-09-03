@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AuditoriaDeCitacoes, Fonte } from "@/lib/fontes";
 import { NIVEIS_EXPLICACAO } from "@/lib/curriculo";
 import { descreverModo, type ModoIA } from "@/lib/ia/modos";
+import { IconeBalanca, IconeBirrete } from "@/components/icones";
 import { Prosa } from "./Prosa";
 import { PainelDeFontes, SeloDeVerificacao } from "./PainelDeFontes";
 
@@ -221,9 +222,16 @@ export function Chat({
         {bolhas.length === 0 && (
           <div className="cartao">
             <h2 className="text-sm font-semibold">
-              {ambiente === "estudante"
-                ? `👨‍🏫 Professor IA${disciplinaNome ? ` — ${disciplinaNome}` : ""}`
-                : "⚖️ Jurista IA"}
+              <span className="inline-flex items-center gap-2">
+                {ambiente === "estudante" ? (
+                  <IconeBirrete className="text-[var(--color-ouro)]" tamanho={18} />
+                ) : (
+                  <IconeBalanca className="text-[var(--color-ouro)]" tamanho={18} />
+                )}
+                {ambiente === "estudante"
+                  ? `Professor IA${disciplinaNome ? ` — ${disciplinaNome}` : ""}`
+                  : "Jurista IA"}
+              </span>
             </h2>
             <p className="mt-1.5 text-sm text-[var(--color-texto-suave)]">
               {ambiente === "estudante"

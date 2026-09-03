@@ -1,3 +1,4 @@
+import { IconeBussola } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -30,7 +31,10 @@ export default async function PaginaDoRoteiro({
             Roteiro de atuação
           </Link>
         </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">🧭 {roteiro.areaJuridica}</h1>
+        <h1 className="mt-2 flex items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <IconeBussola className="shrink-0 text-[var(--color-ouro)]" tamanho={24} />
+          {roteiro.areaJuridica}
+        </h1>
         <p className="mt-3 text-sm leading-relaxed text-[var(--color-texto-suave)]">
           {roteiro.sintese}
         </p>

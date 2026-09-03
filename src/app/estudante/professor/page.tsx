@@ -1,3 +1,4 @@
+import { IconeBirrete } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { exigirUsuario, perfilDoEstudante } from "@/lib/auth";
@@ -89,7 +90,7 @@ export default async function PaginaProfessor({
       <div>
         <header className="mb-5">
           <h1 className="text-xl font-bold tracking-tight">
-            👨‍🏫 Professor IA
+            <IconeBirrete className="text-[var(--color-ouro)]" tamanho={22} /> Professor IA
             {disciplina && (
               <span className="text-[var(--color-texto-fraco)]"> · {disciplina.nome}</span>
             )}

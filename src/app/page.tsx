@@ -1,5 +1,19 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { Fachada } from "@/components/Fachada";
+import {
+  IconeBalanca,
+  IconeBirrete,
+  IconeColuna,
+  IconeBussola,
+  IconeLivro,
+  IconePena,
+  IconePlano,
+  IconeProcesso,
+  IconeQuestoes,
+  IconeSelo,
+} from "@/components/icones";
+
 import { redirect } from "next/navigation";
 import { usuarioAtual } from "@/lib/auth";
 import { CATALOGO } from "@/lib/fontes";
@@ -23,17 +37,17 @@ const JORNADA = [
 ];
 
 const RECURSOS_ESTUDANTE = [
-  { emoji: "👨‍🏫", titulo: "Professor IA", texto: "Explica, reexplica de outro jeito quando você não entende, dá exemplo e depois te faz responder." },
-  { emoji: "📚", titulo: "Universidade virtual", texto: "A grade do seu período, disciplina por disciplina, com ementa, temas e legislação pertinente." },
-  { emoji: "📝", titulo: "Gerador de questões", texto: "Estilo faculdade, OAB ou concurso, na dificuldade que você pedir — com correção comentada." },
-  { emoji: "🧠", titulo: "Diagnóstico por disciplina", texto: "A plataforma mede onde você está fraco e monta o plano de estudos a partir disso." },
+  { Icone: IconeColuna, titulo: "Professor IA", texto: "Explica, reexplica de outro jeito quando você não entende, dá exemplo e depois te faz responder." },
+  { Icone: IconeLivro, titulo: "Universidade virtual", texto: "A grade do seu período, disciplina por disciplina, com ementa, temas e legislação pertinente." },
+  { Icone: IconeQuestoes, titulo: "Gerador de questões", texto: "Estilo faculdade, OAB ou concurso, na dificuldade que você pedir — com correção comentada." },
+  { Icone: IconePlano, titulo: "Diagnóstico por disciplina", texto: "A plataforma mede onde você está fraco e monta o plano de estudos a partir disso." },
 ];
 
 const RECURSOS_PROFISSIONAL = [
-  { emoji: "📄", titulo: "Análise de processo", texto: "Envie o PDF: partes, objeto, fase, pedidos e — o que mais importa — os pontos de atenção." },
-  { emoji: "🧭", titulo: "Nunca vi esse caso", texto: "Roteiro de atuação em oito etapas, do entendimento do problema à estratégia." },
-  { emoji: "✍️", titulo: "Minutas", texto: "Estrutura de peça para revisão, com o que precisa ser conferido antes de protocolar." },
-  { emoji: "🔎", titulo: "Fonte antes da opinião", texto: "Cada afirmação normativa aponta para o texto oficial. O que não tem fonte é marcado como tal." },
+  { Icone: IconeProcesso, titulo: "Análise de processo", texto: "Envie o PDF: partes, objeto, fase, pedidos e — o que mais importa — os pontos de atenção." },
+  { Icone: IconeBussola, titulo: "Nunca vi esse caso", texto: "Roteiro de atuação em oito etapas, do entendimento do problema à estratégia." },
+  { Icone: IconePena, titulo: "Minutas", texto: "Estrutura de peça para revisão, com o que precisa ser conferido antes de protocolar." },
+  { Icone: IconeSelo, titulo: "Fonte antes da opinião", texto: "Cada afirmação normativa aponta para o texto oficial. O que não tem fonte é marcado como tal." },
 ];
 
 export default async function Inicio() {
@@ -54,11 +68,15 @@ export default async function Inicio() {
         </div>
       </header>
 
-      <section className="pt-14 pb-16">
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-ouro-fraco)] bg-[var(--color-ouro)]/5 px-3 py-1 text-xs font-medium text-[var(--color-ouro)]">
+      <section className="relative pt-14 pb-16">
+        {/* A fachada acompanha o herói em tela larga e some no celular, onde
+            competiria com o texto em vez de emoldurá-lo. */}
+        <Fachada className="pointer-events-none absolute right-0 top-2 hidden h-[300px] w-auto opacity-30 lg:block xl:h-[360px]" />
+
+        <p className="relative mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-ouro-fraco)] bg-[var(--color-ouro)]/5 px-3 py-1 text-xs font-medium text-[var(--color-ouro)]">
           Seu professor de Direito e seu assistente jurídico no mesmo lugar
         </p>
-        <h1 className="max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+        <h1 className="relative max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
           A plataforma que acompanha você{" "}
           <span className="text-[var(--color-ouro)]">do primeiro período à advocacia</span>.
         </h1>
@@ -110,12 +128,14 @@ export default async function Inicio() {
 
       <section className="grid gap-10 border-t border-[var(--color-borda)] py-14 lg:grid-cols-2">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold">🎓 Modo estudante</h2>
+          <h2 className="flex items-center gap-2.5 text-lg font-bold">
+            <IconeBirrete className="text-[var(--color-ouro)]" tamanho={22} /> Modo estudante
+          </h2>
           <ul className="mt-5 space-y-3">
             {RECURSOS_ESTUDANTE.map((r) => (
               <li key={r.titulo} className="cartao p-4!">
                 <h3 className="text-sm font-semibold">
-                  <span className="mr-2">{r.emoji}</span>
+                  <r.Icone className="mr-2 inline-block shrink-0 align-[-3px] text-[var(--color-ouro)]" tamanho={18} />
                   {r.titulo}
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--color-texto-suave)]">{r.texto}</p>
@@ -124,12 +144,14 @@ export default async function Inicio() {
           </ul>
         </div>
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold">⚖️ Modo profissional</h2>
+          <h2 className="flex items-center gap-2.5 text-lg font-bold">
+            <IconeBalanca className="text-[var(--color-ouro)]" tamanho={22} /> Modo profissional
+          </h2>
           <ul className="mt-5 space-y-3">
             {RECURSOS_PROFISSIONAL.map((r) => (
               <li key={r.titulo} className="cartao p-4!">
                 <h3 className="text-sm font-semibold">
-                  <span className="mr-2">{r.emoji}</span>
+                  <r.Icone className="mr-2 inline-block shrink-0 align-[-3px] text-[var(--color-ouro)]" tamanho={18} />
                   {r.titulo}
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-[var(--color-texto-suave)]">{r.texto}</p>

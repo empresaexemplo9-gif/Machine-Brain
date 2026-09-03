@@ -1,3 +1,4 @@
+import { IconeBalanca, IconeProcesso } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -42,7 +43,10 @@ export default async function PaginaDoDocumento({
             Documentos
           </Link>
         </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">📄 {documento.nome_arquivo}</h1>
+        <h1 className="mt-2 flex items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <IconeProcesso className="shrink-0 text-[var(--color-ouro)]" tamanho={24} />
+          {documento.nome_arquivo}
+        </h1>
         <p className="mt-1 text-sm text-[var(--color-texto-suave)]">
           {documento.tipo.toUpperCase()} · {documento.caracteres.toLocaleString("pt-BR")} caracteres
           · enviado em {documento.criado_em}
@@ -57,7 +61,7 @@ export default async function PaginaDoDocumento({
             href={`/profissional/jurista?documento=${documento.id}`}
             className="botao-secundario py-2! text-xs!"
           >
-            ⚖️ Conversar sobre este documento
+            <IconeBalanca tamanho={16} /> Conversar sobre este documento
           </Link>
         </div>
       </header>

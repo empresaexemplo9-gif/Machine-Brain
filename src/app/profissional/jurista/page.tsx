@@ -1,3 +1,5 @@
+import { IconeProcesso } from "@/components/icones";
+import { IconeBalanca } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { exigirUsuario } from "@/lib/auth";
@@ -48,7 +50,10 @@ export default async function PaginaJurista({
           <div>
             <h2 className="titulo-secao mb-2">Documento anexado</h2>
             <div className="cartao p-3!">
-              <p className="truncate text-xs font-medium">📄 {documento.nome_arquivo}</p>
+              <p className="flex items-center gap-1.5 truncate text-xs font-medium">
+                <IconeProcesso className="shrink-0 text-[var(--color-ouro)]" tamanho={14} />
+                {documento.nome_arquivo}
+              </p>
               <p className="mt-1 text-xs text-[var(--color-texto-fraco)]">
                 O Jurista IA responde com o texto deste documento à vista.
               </p>
@@ -94,7 +99,9 @@ export default async function PaginaJurista({
 
       <div>
         <header className="mb-5">
-          <h1 className="text-xl font-bold tracking-tight">⚖️ Jurista IA</h1>
+          <h1 className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
+            <IconeBalanca className="text-[var(--color-ouro)]" tamanho={22} /> Jurista IA
+          </h1>
           <p className="mt-1 text-xs text-[var(--color-texto-fraco)]">
             Assistente, não advogado: as minutas saem para revisão e a estratégia é sua.
           </p>

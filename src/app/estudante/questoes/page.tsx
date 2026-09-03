@@ -1,3 +1,4 @@
+import { IconeQuestoes } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { disciplinasMatriculadas, exigirUsuario } from "@/lib/auth";
@@ -31,7 +32,9 @@ export default async function PaginaQuestoes({
   return (
     <div className="space-y-10">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">📝 Gerador de questões</h1>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <IconeQuestoes className="text-[var(--color-ouro)]" tamanho={24} /> Gerador de questões
+        </h1>
         <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
           Peça quantas questões quiser, no estilo e na dificuldade que você precisa. A correção
           explica por que a certa está certa — e por que a errada mais tentadora te pegou.

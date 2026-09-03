@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { IconeBalanca, IconeBirrete } from "./icones";
 import { sair } from "@/app/acoes-sessao";
 import type { Usuario } from "@/lib/auth";
 
@@ -60,7 +61,15 @@ export function Cabecalho({
             href={`/${outro}`}
             className="hidden rounded-lg border border-[var(--color-borda-forte)] px-3 py-1.5 text-xs font-medium text-[var(--color-texto-suave)] transition-colors hover:border-[var(--color-ouro-fraco)] hover:text-[var(--color-ouro)] sm:inline-flex"
           >
-            {outro === "profissional" ? "⚖️ Modo profissional" : "🎓 Modo estudante"}
+            {outro === "profissional" ? (
+              <>
+                <IconeBalanca tamanho={15} /> Modo profissional
+              </>
+            ) : (
+              <>
+                <IconeBirrete tamanho={15} /> Modo estudante
+              </>
+            )}
           </Link>
           <Link
             href="/perfil"

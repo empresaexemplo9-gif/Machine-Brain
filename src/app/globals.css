@@ -1,28 +1,47 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Identidade visual
-   Escuro por padrão: a plataforma é feita para sessões longas de estudo e de
-   leitura de processo. O dourado marca autoridade jurídica; o azul marca ação.
+   Identidade visual — navy, dourado, preto e branco.
+
+   Navy é a estrutura: fundo, superfícies, bordas. Dourado é a ação: botão,
+   link, foco, o que está ativo. Preto aparece como profundidade (o fundo mais
+   fundo e o texto sobre dourado), e branco puro fica reservado ao que precisa
+   pesar mais que o resto — a marca e os títulos.
+
+   Por que dourado e não navy no botão: o fundo já é navy. Botão navy sobre
+   fundo navy some. O dourado sobre navy dá 8,4:1 de contraste, e o preto sobre
+   dourado dá 8,9:1 — os dois passam com folga no critério AA, inclusive em
+   texto pequeno. A hierarquia vem do contraste, não da saturação.
    --------------------------------------------------------------------------- */
 @theme {
-  --color-fundo: #0a0e13;
-  --color-superficie: #111820;
-  --color-superficie-2: #17202b;
-  --color-borda: #22303d;
-  --color-borda-forte: #33475a;
+  /* Estrutura: do preto ao navy, do mais fundo ao mais próximo. */
+  --color-preto: #05080f;
+  --color-fundo: #080d18;
+  --color-superficie: #0f1727;
+  --color-superficie-2: #16213a;
+  --color-borda: #223252;
+  --color-borda-forte: #354b7d;
 
-  --color-texto: #e8eef4;
-  --color-texto-suave: #93a4b5;
-  --color-texto-fraco: #61748a;
+  /* O navy da marca, o mesmo do D da logo. */
+  --color-navy: #131929;
+  --color-navy-claro: #1d2740;
 
-  --color-ouro: #d4a843;
-  --color-ouro-fraco: #6b5520;
-  --color-acento: #4d8ff0;
-  --color-acento-fraco: #1e3f6d;
+  --color-branco: #ffffff;
+  --color-texto: #f2f6fb;
+  --color-texto-suave: #a9b8ce;
+  --color-texto-fraco: #71829c;
 
-  --color-verde: #3fb27f;
-  --color-ambar: #d9a441;
+  /* Dourado: metálico, não amarelo. */
+  --color-ouro: #d4af37;
+  --color-ouro-claro: #ecd08a;
+  --color-ouro-fraco: #6b5418;
+
+  /* Ação = dourado. Mantém o nome para o resto do código não precisar mudar. */
+  --color-acento: #d4af37;
+  --color-acento-fraco: #4a3a10;
+
+  --color-verde: #4bb98a;
+  --color-ambar: #e3a83c;
   --color-vermelho: #e0605e;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -82,6 +101,17 @@ body::before {
     @apply rounded-xl border border-[var(--color-borda)] bg-[var(--color-superficie)] p-5;
   }
 
+  /* Filete dourado no topo, como o friso de um papel timbrado. Usado onde a
+     seção precisa de peso institucional, não em todo cartão — se todo cartão
+     tem destaque, nenhum tem. */
+  .cartao-marcado {
+    @apply relative overflow-hidden rounded-xl border border-[var(--color-borda)]
+           bg-[var(--color-superficie)] p-5
+           before:absolute before:inset-x-0 before:top-0 before:h-px
+           before:bg-gradient-to-r before:from-transparent before:via-[var(--color-ouro)] before:to-transparent
+           before:content-[""];
+  }
+
   /* Repete as utilidades de .cartao em vez de @apply: no Tailwind v4 o @apply
      só aceita utilitários, não classes de componente definidas aqui. */
   .cartao-interativo {
@@ -100,9 +130,12 @@ body::before {
            focus:border-[var(--color-acento)] focus:ring-1 focus:ring-[var(--color-acento)];
   }
 
+  /* Texto PRETO sobre o dourado: branco sobre dourado dá ~2:1 e reprova em
+     qualquer critério de contraste. O preto dá 8,9:1. */
   .botao {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-acento)] px-4 py-2.5
-           text-sm font-semibold text-white transition-opacity hover:opacity-90
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[var(--color-ouro)] px-4 py-2.5
+           text-sm font-semibold text-[var(--color-preto)] transition-colors
+           hover:bg-[var(--color-ouro-claro)]
            disabled:cursor-not-allowed disabled:opacity-40;
   }
 

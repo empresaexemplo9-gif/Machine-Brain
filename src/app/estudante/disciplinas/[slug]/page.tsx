@@ -1,3 +1,4 @@
+import { IconeBirrete, IconeQuestoes } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,10 +44,10 @@ export default async function PaginaDaDisciplina({ params }: Props) {
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Link href={`/estudante/professor?disciplina=${disciplina.slug}`} className="botao py-2! text-xs!">
-            👨‍🏫 Perguntar ao Professor IA
+            <IconeBirrete tamanho={16} /> Perguntar ao Professor IA
           </Link>
           <Link href={`/estudante/questoes?disciplina=${disciplina.slug}`} className="botao-secundario py-2! text-xs!">
-            📝 Gerar questões
+            <IconeQuestoes tamanho={16} /> Gerar questões
           </Link>
         </div>
       </header>

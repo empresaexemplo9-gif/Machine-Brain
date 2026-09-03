@@ -1,3 +1,4 @@
+import { IconeBalanca, IconeBussola, IconeProcesso } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { exigirUsuario } from "@/lib/auth";
@@ -11,19 +12,19 @@ export const metadata: Metadata = { title: "Painel profissional" };
 const FERRAMENTAS = [
   {
     href: "/profissional/jurista",
-    emoji: "⚖️",
+    Icone: IconeBalanca,
     titulo: "Jurista IA",
     texto: "Pergunte, discuta uma tese ou peça a estrutura de uma peça. Toda norma vem com a fonte.",
   },
   {
     href: "/profissional/documentos",
-    emoji: "📄",
+    Icone: IconeProcesso,
     titulo: "Análise de documentos",
     texto: "Envie um PDF ou DOCX: partes, objeto, fase, pedidos e pontos de atenção.",
   },
   {
     href: "/profissional/roteiro",
-    emoji: "🧭",
+    Icone: IconeBussola,
     titulo: "Nunca vi esse caso",
     texto: "Roteiro de atuação em oito etapas para um tipo de causa que você não domina.",
   },
@@ -54,7 +55,7 @@ export default async function PainelProfissional() {
             <li key={f.href}>
               <Link href={f.href} className="cartao-interativo block h-full">
                 <h2 className="text-sm font-semibold">
-                  <span className="mr-2">{f.emoji}</span>
+                  <f.Icone className="mr-2 inline-block shrink-0 align-[-3px] text-[var(--color-ouro)]" tamanho={18} />
                   {f.titulo}
                 </h2>
                 <p className="mt-1.5 text-xs leading-relaxed text-[var(--color-texto-suave)]">

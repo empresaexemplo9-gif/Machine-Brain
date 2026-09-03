@@ -1,5 +1,7 @@
 "use client";
 
+import { IconeSelo } from "@/components/icones";
+
 import { useState, useTransition } from "react";
 
 export function BotaoAnalisar({
@@ -28,7 +30,15 @@ export function BotaoAnalisar({
           })
         }
       >
-        {pendente ? "Analisando…" : jaAnalisado ? "Refazer análise" : "🔎 Analisar documento"}
+        {pendente ? (
+          "Analisando…"
+        ) : jaAnalisado ? (
+          "Refazer análise"
+        ) : (
+          <>
+            <IconeSelo tamanho={16} /> Analisar documento
+          </>
+        )}
       </button>
       {erro && <span className="mt-2 max-w-xs text-xs text-[var(--color-vermelho)]">{erro}</span>}
     </span>

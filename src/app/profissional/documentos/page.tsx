@@ -1,3 +1,4 @@
+import { IconeProcesso } from "@/components/icones";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { exigirUsuario } from "@/lib/auth";
@@ -16,7 +17,9 @@ export default async function PaginaDocumentos() {
   return (
     <div className="space-y-10">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight">📄 Análise de documentos</h1>
+        <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <IconeProcesso className="text-[var(--color-ouro)]" tamanho={24} /> Análise de documentos
+        </h1>
         <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
           Envie uma peça, um contrato ou os autos. A plataforma extrai o texto e devolve o caso
           organizado — com os pontos que merecem sua atenção antes de qualquer coisa.
