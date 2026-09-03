@@ -37,8 +37,10 @@ export function Cabecalho({
 
   const outro = ambiente === "estudante" ? "profissional" : "estudante";
 
+  // O filete dourado sob o cabeçalho é o friso de um papel timbrado. Ele some
+  // nas pontas, com gradiente, para marcar a divisa sem virar uma faixa.
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--color-borda)] bg-[var(--color-fundo)]/85 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-[var(--color-borda)] bg-[var(--color-fundo)]/85 backdrop-blur-md after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-[var(--color-ouro)]/45 after:to-transparent after:content-['']">
       <div className="flex w-full items-center gap-6 px-5 py-3 sm:px-8 lg:px-12">
         <Link href={`/${ambiente}`} className="shrink-0">
           <Logo />

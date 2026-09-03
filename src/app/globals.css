@@ -59,21 +59,62 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Fundo com um leve halo, para a página não parecer um retângulo morto. */
+/* ---------------------------------------------------------------------------
+   Fundo em duas camadas
+
+   Camada 1 (::before): halo e vinheta. Dois focos de luz no alto — um navy à
+   esquerda, um dourado à direita — e um escurecimento nas bordas. É o que tira
+   a página da aparência de retângulo chapado e empurra a atenção para o centro.
+
+   Camada 2 (::after): grão de papel — uma malha de pontos de 1px a cada 3px.
+
+   A primeira tentativa foi trama diagonal cruzada, como papel de segurança de
+   certificado. Renderizada, virou papel de parede listrado: duas direções no
+   mesmo período de 7px produzem um moiré forte na escala da tela, e a atenção
+   ia para as listras em vez do conteúdo. O ponto não tem direção, então não
+   forma listra nenhuma — lê como grão de papel impresso, que é o que se queria.
+
+   As duas são `fixed` para não rolarem junto com o conteúdo — trama que rola
+   junto vira ruído em movimento, e cansa em sessão longa de leitura. E as duas
+   são `pointer-events: none`, para não interceptarem clique nenhum.
+   --------------------------------------------------------------------------- */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(60rem 40rem at 12% -10%, rgba(77, 143, 240, 0.09), transparent 60%),
-    radial-gradient(50rem 35rem at 95% 5%, rgba(212, 168, 67, 0.07), transparent 60%);
+    radial-gradient(58rem 38rem at 10% -12%, rgba(53, 75, 125, 0.28), transparent 62%),
+    radial-gradient(46rem 32rem at 96% 2%, rgba(212, 175, 55, 0.1), transparent 60%),
+    radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(5, 8, 15, 0.55) 100%);
   z-index: 0;
 }
 
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--color-branco) 0.6px,
+    transparent 0.7px
+  );
+  background-size: 3px 3px;
+  z-index: 0;
+}
+
+/* Quem pediu menos movimento e menos ruído visual fica só com o fundo liso. */
+@media (prefers-reduced-motion: reduce) {
+  body::after {
+    display: none;
+  }
+}
+
 ::selection {
-  background: var(--color-acento-fraco);
-  color: #fff;
+  background: var(--color-ouro);
+  color: var(--color-preto);
 }
 
 /* Barra de rolagem discreta, para não brigar com o conteúdo. */

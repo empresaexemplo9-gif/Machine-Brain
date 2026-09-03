@@ -33,6 +33,18 @@ por `currentColor` e compartilham a mesma espessura de traço — é o que faz u
 conjunto parecer um conjunto. São onze: balança, martelo, coluna, livro,
 processo, bússola, birrete, pena, selo, questões e plano.
 
+O fundo tem duas camadas fixas, em `globals.css`. A primeira traz dois focos de
+luz no alto — navy à esquerda, dourado à direita — e uma vinheta que escurece as
+bordas e empurra a atenção para o centro. A segunda é grão de papel: pontos de
+1px a cada 3px, a 5% de opacidade.
+
+O grão começou como trama diagonal cruzada, imitando papel de segurança de
+certificado. Renderizado, virou papel de parede listrado — duas direções no
+mesmo período de 7px produzem moiré na escala da tela, e a atenção ia para as
+listras. O ponto não tem direção, então não forma listra. As duas camadas são
+`fixed` (trama que rola junto vira ruído em movimento) e somem sob
+`prefers-reduced-motion`.
+
 `src/components/Fachada.tsx` é a ilustração do herói — frontão, seis colunas,
 escadaria e a balança no tímpano, em vetor. Uma armadilha ficou registrada no
 próprio arquivo: o gradiente precisa de `gradientUnits="userSpaceOnUse"`. No
