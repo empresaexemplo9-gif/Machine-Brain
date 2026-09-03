@@ -17,16 +17,42 @@ import {
  * Continua usando o SDK oficial (já era dependência) em vez de fetch: aqui a
  * saída estruturada usa ferramenta forçada de verdade, então o retorno chega
  * como objeto, sem depender de o modelo respeitar "só JSON".
+ *
+ * Duas particularidades desta API que não existem nas outras três:
+ *
+ * 1. Chave vinculada a identidade (identity-linked) exige o cabeçalho
+ *    anthropic-workspace-id. Sem ele a API recusa com 400 dizendo exatamente
+ *    isso. Chave comum ignora o cabeçalho, então mandá-lo quando existe é
+ *    seguro nos dois casos.
+ *
+ * 2. Os modelos atuais NÃO aceitam temperature: o parâmetro foi removido e a
+ *    chamada volta 400. Quem regula a profundidade agora é output_config.effort.
+ *    Por isso a temperatura pedida por quem chama é ignorada aqui — e só aqui;
+ *    nos três provedores gratuitos ela continua valendo.
  */
 
 const ID = "parecer" as const;
 
 const chave = () => (process.env.ANTHROPIC_API_KEY ?? "").trim();
 const modelo = () => (process.env.MB_MODEL_PRINCIPAL ?? "").trim() || "claude-opus-5";
+const workspace = () => (process.env.ANTHROPIC_WORKSPACE_ID ?? "").trim();
+
+/** `high` é o padrão da API; explicitar deixa o custo visível no código. */
+const ESFORCO = { effort: "high" } as const;
 
 let cliente: Anthropic | null = null;
+let clienteFeitoCom = "";
+
 function obterCliente(): Anthropic {
-  if (!cliente) cliente = new Anthropic({ apiKey: chave() });
+  // A chave e o workspace podem mudar entre deploys sem o módulo recarregar.
+  const assinatura = `${chave()}|${workspace()}`;
+  if (!cliente || clienteFeitoCom !== assinatura) {
+    cliente = new Anthropic({
+      apiKey: chave(),
+      ...(workspace() ? { defaultHeaders: { "anthropic-workspace-id": workspace() } } : {}),
+    });
+    clienteFeitoCom = assinatura;
+  }
   return cliente;
 }
 
@@ -51,7 +77,7 @@ export const provedorAnthropic: Provedor = {
     const resposta = await obterCliente().messages.create({
       model: modelo(),
       max_tokens: opcoes.maxTokens ?? 2048,
-      temperature: opcoes.temperatura ?? 0.3,
+      output_config: ESFORCO,
       system: opcoes.sistema,
       messages: paraMensagens(opcoes.turnos),
     });
@@ -65,7 +91,7 @@ export const provedorAnthropic: Provedor = {
     const fluxo = obterCliente().messages.stream({
       model: modelo(),
       max_tokens: opcoes.maxTokens ?? 2048,
-      temperature: opcoes.temperatura ?? 0.3,
+      output_config: ESFORCO,
       system: opcoes.sistema,
       messages: paraMensagens(opcoes.turnos),
     });
@@ -85,7 +111,7 @@ export const provedorAnthropic: Provedor = {
     const resposta = await obterCliente().messages.create({
       model: modelo(),
       max_tokens: opcoes.maxTokens ?? 4096,
-      temperature: opcoes.temperatura ?? 0.4,
+      output_config: ESFORCO,
       system: opcoes.sistema,
       messages: paraMensagens(opcoes.turnos),
       tools: [

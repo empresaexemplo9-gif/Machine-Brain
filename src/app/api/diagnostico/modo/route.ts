@@ -71,10 +71,25 @@ export async function POST(requisicao: Request) {
     });
   } catch (erro) {
     // A mensagem do provedor é o dado útil: ela distingue chave recusada de
-    // modelo inexistente de cota estourada. Repassar é melhor que resumir.
-    return NextResponse.json({
-      ok: false,
-      mensagem: erro instanceof Error ? erro.message : "Falha inesperada.",
-    });
+    // modelo inexistente de cota estourada. Repassar é melhor que resumir —
+    // mas quando ela nomeia uma variável que resolve, dizer qual é economiza
+    // uma busca na documentação.
+    const original = erro instanceof Error ? erro.message : "Falha inesperada.";
+    return NextResponse.json({ ok: false, mensagem: `${original}${dica(original)}` });
   }
+}
+
+/** Traduz erros conhecidos em "defina esta variável". */
+function dica(mensagem: string): string {
+  const texto = mensagem.toLowerCase();
+  if (texto.includes("anthropic-workspace-id")) {
+    return " → defina ANTHROPIC_WORKSPACE_ID com o id do workspace (o painel da Anthropic mostra em Settings → Workspaces).";
+  }
+  if (texto.includes("temperature")) {
+    return " → o modelo não aceita temperature; a plataforma já não a envia, então isto indica build antiga: refaça o deploy.";
+  }
+  if (texto.includes("credit") || texto.includes("billing") || texto.includes("insufficient")) {
+    return " → é cobrança, não configuração: a conta do provedor precisa de saldo.";
+  }
+  return "";
 }

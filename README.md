@@ -131,6 +131,14 @@ oferece os que têm chave configurada.
 | **Debate** | OpenRouter | Modelos abertos variados — ouvir o contraponto | `OPENROUTER_API_KEY` |
 | **Parecer** | Anthropic | O mais criterioso, e o único pago | `ANTHROPIC_API_KEY` |
 
+Chave da Anthropic vinculada a identidade (*identity-linked*) exige também
+`ANTHROPIC_WORKSPACE_ID` — sem ele a API recusa com *"anthropic-workspace-id is
+required"*. Chave comum ignora o cabeçalho, então preencher quando existe é
+seguro nos dois casos. E os modelos atuais **não aceitam `temperature`**: o
+parâmetro foi removido e a chamada volta 400, então neste provedor a
+profundidade é regulada por `output_config.effort`. Isso vale só aqui — nos três
+gratuitos a temperatura continua valendo.
+
 Os três primeiros têm nível gratuito: a plataforma funciona inteira antes de
 existir plano pago. Sem nenhuma chave, ela entra em modo demonstração e diz
 isso — nunca preenche o espaço com direito inventado.
