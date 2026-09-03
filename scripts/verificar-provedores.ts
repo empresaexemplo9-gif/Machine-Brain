@@ -72,6 +72,40 @@ const servidor = createServer(async (req, res) => {
   const corpo = await corpoDe(req);
   const enviado = corpo ? (JSON.parse(corpo) as Record<string, unknown>) : {};
 
+  // --- listagem de modelos, dialeto Gemini ---
+  // O provedor do Gemini pagina com ?pageSize; é o que distingue a rota aqui.
+  if (url.searchParams.has("pageSize")) {
+    return json(res, 200, {
+      models: [
+        { name: "models/embedding-001", supportedGenerationMethods: ["embedContent"] },
+        { name: "models/gemini-2.5-pro", supportedGenerationMethods: ["generateContent"] },
+        { name: "models/gemini-2.5-flash", supportedGenerationMethods: ["generateContent"] },
+      ],
+    });
+  }
+
+  // --- listagem de modelos, dialeto OpenAI ---
+  if (url.pathname.endsWith("/models")) {
+    // Só o OpenRouter manda http-referer: é como este servidor sabe qual dos
+    // dois provedores compatíveis está perguntando, já que a rota é a mesma.
+    const ehOpenRouter = Boolean(req.headers["http-referer"]);
+    return json(res, 200, {
+      data: ehOpenRouter
+        ? [
+            { id: "openai/gpt-4o", pricing: { prompt: "0.000005", completion: "0.00001" } },
+            {
+              id: "meta-llama/llama-3.3-70b-instruct:free",
+              pricing: { prompt: "0", completion: "0" },
+            },
+          ]
+        : [
+            { id: "whisper-large-v3" },
+            { id: "llama-3.3-70b-versatile" },
+            { id: "gemma2-9b-it" },
+          ],
+    });
+  }
+
   // --- Groq / OpenRouter (dialeto OpenAI) ---
   if (url.pathname.endsWith("/chat/completions")) {
     if (url.pathname.includes("/cenario-limite/")) {
@@ -81,6 +115,16 @@ const servidor = createServer(async (req, res) => {
     const mensagens = enviado.messages as { role: string; content: string }[];
     if (mensagens[0]?.role !== "system") {
       return json(res, 400, { error: { message: "faltou o prompt de sistema" } });
+    }
+
+    if (url.pathname.includes("/cenario-aposentado/")) {
+      // O modelo do código foi desativado; o descoberto pela listagem serve.
+      if (enviado.model === "llama-3.3-70b-versatile") {
+        return json(res, 200, { choices: [{ message: { content: "resposta completa" } }] });
+      }
+      return json(res, 400, {
+        error: { message: `The model \`${String(enviado.model)}\` has been decommissioned.` },
+      });
     }
 
     if (url.pathname.includes("/cenario-raciocinio/")) {
@@ -297,6 +341,51 @@ async function main(): Promise<void> {
     if (semRaciocinio("sem bloco aqui") !== "sem bloco aqui") {
       throw new Error("semRaciocinio alterou texto que não tinha bloco");
     }
+  });
+
+  console.log("\ndescoberta de modelo");
+
+  await checar("Groq: escolhe a família preferida entre os modelos listados", async () => {
+    delete process.env.MB_MODEL_GROQ;
+    const escolhido = await PROVEDORES.estudo.resolverModelo();
+    if (escolhido !== "llama-3.3-70b-versatile") throw new Error(`escolheu: ${escolhido}`);
+  });
+
+  await checar("Groq: modelo de áudio nunca é escolhido para conversa", async () => {
+    const modelos = await PROVEDORES.estudo.listarModelos();
+    if (modelos.some((m) => m.includes("whisper"))) throw new Error(`veio: ${modelos.join(", ")}`);
+  });
+
+  await checar("OpenRouter: modelo pago fica de fora", async () => {
+    delete process.env.MB_MODEL_OPENROUTER;
+    const modelos = await PROVEDORES.debate.listarModelos();
+    if (modelos.includes("openai/gpt-4o")) throw new Error(`pago entrou: ${modelos.join(", ")}`);
+    if (!modelos.includes("meta-llama/llama-3.3-70b-instruct:free")) {
+      throw new Error(`gratuito não entrou: ${modelos.join(", ")}`);
+    }
+  });
+
+  await checar("Gemini: tira o prefixo models/ e ignora o de embedding", async () => {
+    delete process.env.MB_MODEL_GEMINI;
+    const modelos = await PROVEDORES.pesquisa.listarModelos();
+    if (modelos.some((m) => m.startsWith("models/"))) throw new Error(`prefixo ficou: ${modelos}`);
+    if (modelos.some((m) => m.includes("embedding"))) throw new Error(`embedding entrou: ${modelos}`);
+    if (modelos[0] !== "gemini-2.5-flash") throw new Error(`preferiu: ${modelos[0]}`);
+  });
+
+  await checar("modelo aposentado: descobre outro e a chamada passa", async () => {
+    delete process.env.MB_MODEL_GROQ;
+    process.env.MB_BASE_GROQ = `${base}/cenario-aposentado`;
+    const texto = await PROVEDORES.estudo.responder(conversa);
+    if (texto !== "resposta completa") throw new Error(`veio: ${JSON.stringify(texto)}`);
+    process.env.MB_BASE_GROQ = base;
+  });
+
+  await checar("modelo do ambiente manda, e não é trocado sozinho", async () => {
+    process.env.MB_MODEL_GROQ = "modelo-que-eu-escolhi";
+    const escolhido = await PROVEDORES.estudo.resolverModelo();
+    if (escolhido !== "modelo-que-eu-escolhi") throw new Error(`escolheu: ${escolhido}`);
+    delete process.env.MB_MODEL_GROQ;
   });
 
   await checar("sem chave nenhuma, nenhum provedor se diz disponível", async () => {

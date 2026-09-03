@@ -61,9 +61,12 @@ export async function POST(requisicao: Request) {
       temperatura: 0,
     });
     const ms = Date.now() - inicio;
+    // Depois da chamada o modelo já está resolvido: se veio da descoberta, é
+    // aqui que se vê qual foi. É a pergunta que mais importa quando alguém
+    // configurou um id que o provedor aposentou.
     return NextResponse.json({
       ok: true,
-      mensagem: `Respondeu em ${ms}ms — modelo ${provedor.modelo()}.`,
+      mensagem: `Respondeu em ${ms}ms — modelo ${await provedor.resolverModelo()}.`,
       amostra: texto.trim().slice(0, 80),
     });
   } catch (erro) {

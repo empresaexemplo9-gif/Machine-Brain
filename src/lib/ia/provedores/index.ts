@@ -23,6 +23,9 @@ export const PROVEDORES: Record<ModoIA, Provedor> = {
     variavelChave: "GROQ_API_KEY",
     variavelModelo: "MB_MODEL_GROQ",
     prefixoAjustes: "MB_GROQ",
+    // Tudo na Groq tem nível gratuito; o que muda é a qualidade. Famílias, não
+    // versões: o provedor troca 3.3 por 4 sem avisar.
+    preferidos: ["llama-3.3-70b", "llama-4", "llama-3.1-70b", "qwen", "llama", "gemma"],
     modeloPadrao: "llama-3.3-70b-versatile",
   }),
   pesquisa: provedorGemini,
@@ -34,6 +37,9 @@ export const PROVEDORES: Record<ModoIA, Provedor> = {
     variavelChave: "OPENROUTER_API_KEY",
     variavelModelo: "MB_MODEL_OPENROUTER",
     prefixoAjustes: "MB_OPENROUTER",
+    // No OpenRouter a maioria dos modelos é paga: só entram os de preço zero.
+    apenasGratuitos: true,
+    preferidos: [":free", "llama", "qwen", "deepseek", "mistral", "gemma"],
     modeloPadrao: "meta-llama/llama-3.3-70b-instruct:free",
     // O OpenRouter usa estes cabeçalhos para atribuir o tráfego à aplicação.
     cabecalhosExtra: {

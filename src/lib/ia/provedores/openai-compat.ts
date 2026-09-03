@@ -2,11 +2,14 @@ import "server-only";
 
 import type { ModoIA } from "../modos";
 import {
+  CacheDeModelo,
   ErroDeGeracao,
+  ehModeloDesconhecido,
   erroDaResposta,
   extrairJson,
   filtrarRaciocinio,
   linhasSSE,
+  preferir,
   semRaciocinio,
   validar,
   type OpcoesConversa,
@@ -41,6 +44,13 @@ interface Config {
   variavelModelo: string;
   /** Prefixo das variáveis de ajuste fino (_TOP_P, _REASONING_EFFORT, …). */
   prefixoAjustes: string;
+  /** Famílias preferidas, em ordem, entre os modelos que o provedor listar. */
+  preferidos: readonly string[];
+  /** Nomes que nunca servem para conversa (áudio, embedding, moderação). */
+  excluir?: readonly string[];
+  /** Só entram modelos sem custo? (OpenRouter cobra em quase todos.) */
+  apenasGratuitos?: boolean;
+  /** Último recurso, se a listagem falhar e não houver nada no ambiente. */
   modeloPadrao: string;
   cabecalhosExtra?: Record<string, string>;
 }
@@ -56,6 +66,16 @@ const respostaSchema = z.object({
   choices: z.array(z.object({ message: mensagemSchema })).min(1),
 });
 
+const listaSchema = z.object({
+  data: z.array(
+    z.object({
+      id: z.string(),
+      // O OpenRouter informa preço por token; "0" é o que caracteriza gratuito.
+      pricing: z.object({ prompt: z.string().nullish(), completion: z.string().nullish() }).nullish(),
+    }),
+  ),
+});
+
 const pedacoSchema = z.object({
   choices: z.array(z.object({ delta: z.object({ content: z.string().nullish() }) })).min(1),
 });
@@ -69,7 +89,6 @@ function paraMensagens(sistema: string, turnos: Turno[]) {
 
 export function criarProvedorOpenAI(config: Config): Provedor {
   const chave = () => (process.env[config.variavelChave] ?? "").trim();
-  const modelo = () => (process.env[config.variavelModelo] ?? "").trim() || config.modeloPadrao;
   const base = () =>
     ((process.env[config.variavelBase] ?? "").trim() || config.base).replace(/\/$/, "");
 
@@ -100,17 +119,99 @@ export function criarProvedorOpenAI(config: Config): Provedor {
     return campos;
   }
 
-  async function chamar(corpo: Record<string, unknown>, fluxo: boolean): Promise<Response> {
-    const resposta = await fetch(`${base()}/chat/completions`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${chave()}`,
-        "content-type": "application/json",
-        ...(config.cabecalhosExtra ?? {}),
-      },
-      body: JSON.stringify({ model: modelo(), ...extras(), ...corpo, stream: fluxo }),
-      signal: AbortSignal.timeout(fluxo ? 120_000 : 60_000),
+  const cache = new CacheDeModelo();
+  const EXCLUIR_PADRAO = ["whisper", "tts", "embed", "guard", "moderation", "distil"];
+
+  /** Modelos servíveis que o provedor diz ter, já filtrados e ordenados. */
+  async function listarModelos(): Promise<string[]> {
+    const resposta = await fetch(`${base()}/models`, {
+      headers: { authorization: `Bearer ${chave()}`, ...(config.cabecalhosExtra ?? {}) },
+      signal: AbortSignal.timeout(20_000),
     });
+    if (!resposta.ok) throw await erroDaResposta(config.id, config.rotulo, resposta);
+
+    const dados = listaSchema.parse(await resposta.json());
+    const proibidos = [...EXCLUIR_PADRAO, ...(config.excluir ?? [])];
+
+    const servíveis = dados.data
+      .filter((m) => !proibidos.some((p) => m.id.toLowerCase().includes(p)))
+      .filter((m) => {
+        if (!config.apenasGratuitos) return true;
+        // Sem preço declarado não dá para afirmar que é grátis: fica de fora.
+        const preco = m.pricing;
+        if (!preco) return m.id.endsWith(":free");
+        return Number(preco.prompt ?? "1") === 0 && Number(preco.completion ?? "1") === 0;
+      })
+      .map((m) => m.id);
+
+    // Reordena pelas famílias preferidas, mantendo o resto atrás.
+    const ordenados: string[] = [];
+    for (const trecho of config.preferidos) {
+      for (const id of servíveis) {
+        if (id.toLowerCase().includes(trecho.toLowerCase()) && !ordenados.includes(id)) {
+          ordenados.push(id);
+        }
+      }
+    }
+    for (const id of servíveis) if (!ordenados.includes(id)) ordenados.push(id);
+    return ordenados;
+  }
+
+  /**
+   * O modelo da próxima chamada.
+   *
+   * O do ambiente manda, quando existe — quem escreveu ali quis aquele. Sem ele,
+   * pergunta ao provedor o que existe hoje em vez de confiar num id fixo no
+   * código: id fixo envelhece, e o sintoma é a plataforma parar sem aviso no dia
+   * em que o provedor aposenta o modelo.
+   */
+  async function resolverModelo(): Promise<string> {
+    const doAmbiente = (process.env[config.variavelModelo] ?? "").trim();
+    if (doAmbiente) return doAmbiente;
+
+    const emCache = cache.ler();
+    if (emCache) return emCache;
+
+    try {
+      const modelos = await listarModelos();
+      const escolhido = preferir(modelos, config.preferidos);
+      if (escolhido) return cache.gravar(escolhido);
+    } catch {
+      // Listagem indisponível não impede tentar: o padrão do código ainda pode
+      // valer, e o erro real da chamada diz mais do que o erro da listagem.
+    }
+    return config.modeloPadrao;
+  }
+
+  async function chamar(corpo: Record<string, unknown>, fluxo: boolean): Promise<Response> {
+    const enviar = async (modeloEscolhido: string) =>
+      fetch(`${base()}/chat/completions`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${chave()}`,
+          "content-type": "application/json",
+          ...(config.cabecalhosExtra ?? {}),
+        },
+        body: JSON.stringify({ model: modeloEscolhido, ...extras(), ...corpo, stream: fluxo }),
+        signal: AbortSignal.timeout(fluxo ? 120_000 : 60_000),
+      });
+
+    const escolhido = await resolverModelo();
+    let resposta = await enviar(escolhido);
+
+    // Modelo aposentado é o caso que mais quebra na prática, e é recuperável:
+    // esquece o que sabíamos, pergunta de novo, tenta uma vez. Só quando o
+    // modelo veio da descoberta — se veio do ambiente, trocá-lo por conta
+    // própria seria ignorar uma escolha explícita.
+    if (!resposta.ok && !(process.env[config.variavelModelo] ?? "").trim()) {
+      const corpoDoErro = await resposta.clone().text().catch(() => "");
+      if (ehModeloDesconhecido(resposta.status, corpoDoErro)) {
+        cache.esquecer();
+        const outro = await resolverModelo();
+        if (outro !== escolhido) resposta = await enviar(outro);
+      }
+    }
+
     if (!resposta.ok) throw await erroDaResposta(config.id, config.rotulo, resposta);
     return resposta;
   }
@@ -118,7 +219,9 @@ export function criarProvedorOpenAI(config: Config): Provedor {
   return {
     id: config.id,
     variavelChave: config.variavelChave,
-    modelo,
+    modelo: () => (process.env[config.variavelModelo] ?? "").trim() || cache.ler() || "(a descobrir)",
+    listarModelos,
+    resolverModelo,
     disponivel: () => chave().length > 0,
 
     async responder(opcoes: OpcoesConversa): Promise<string> {
@@ -208,7 +311,8 @@ export function criarProvedorOpenAI(config: Config): Provedor {
 
       throw new ErroDeGeracao(
         `O modo ${config.rotulo} não retornou a estrutura solicitada. O modelo ` +
-          `${modelo()} pode não suportar chamada de ferramenta — troque em ${config.variavelModelo}.`,
+          `${await resolverModelo()} pode não suportar chamada de ferramenta — ` +
+          `escolha outro em ${config.variavelModelo}.`,
       );
     },
   };

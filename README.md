@@ -138,10 +138,25 @@ isso — nunca preenche o espaço com direito inventado.
 Quando ninguém escolhe, vale a ordem da tabela: gratuitos primeiro, pago por
 último. Assim a chave paga nunca é gasta sem alguém pedir.
 
-O modelo de cada provedor é variável de ambiente (`MB_MODEL_GROQ`,
-`MB_MODEL_GEMINI`, `MB_MODEL_OPENROUTER`, `MB_MODEL_PRINCIPAL`), porque provedor
-aposenta modelo do nível gratuito com frequência — quando acontecer, é uma linha
-no painel, não um deploy.
+**O modelo não é escolhido no código.** Nos três modos gratuitos a plataforma
+pergunta ao provedor quais modelos existem hoje, descarta o que não serve para
+conversa (áudio, embedding, moderação) e — no OpenRouter — o que tem preço, e
+escolhe entre os que sobraram preferindo as famílias que respondem melhor.
+
+Isso existe porque a alternativa não funciona: id fixo no código envelhece, e o
+sintoma de um modelo aposentado é a plataforma parar sem aviso. A preferência é
+por **família** (`llama-3.3-70b`), não por id exato, justamente para sobreviver
+ao provedor trocar a versão.
+
+Se uma chamada falhar dizendo que o modelo não existe, a plataforma esquece o
+que sabia, pergunta de novo e tenta mais uma vez. Uma só: falha em série é
+problema de outra natureza, e insistir esconderia isso.
+
+`MB_MODEL_GROQ`, `MB_MODEL_GEMINI` e `MB_MODEL_OPENROUTER` continuam existindo
+para fixar um modelo. Aí ele vale como escolha explícita e **não** é trocado
+sozinho, nem quando o provedor o aposenta — quem fixou quis aquele, e substituir
+em silêncio entregaria outra coisa. O modo pago nunca descobre modelo: trocar
+sozinho ali gastaria dinheiro que ninguém autorizou.
 
 Groq e OpenRouter falam o mesmo dialeto (`/chat/completions`), então um arquivo
 atende os dois. O Gemini tem API própria e tem a sua. As três usam `fetch`

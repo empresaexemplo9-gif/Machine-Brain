@@ -2,10 +2,13 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  CacheDeModelo,
   ErroDeGeracao,
+  ehModeloDesconhecido,
   erroDaResposta,
   extrairJson,
   linhasSSE,
+  preferir,
   validar,
   type OpcoesConversa,
   type OpcoesEstruturado,
@@ -40,7 +43,75 @@ const candidatoSchema = z.object({
 });
 
 const chave = () => (process.env.GEMINI_API_KEY ?? "").trim();
-const modelo = () => (process.env.MB_MODEL_GEMINI ?? "").trim() || "gemini-2.0-flash";
+
+/**
+ * Famílias preferidas, em ordem. Flash é a linha do nível gratuito; o restante
+ * entra atrás como recurso, e a versão fica de fora de propósito — casar por
+ * família sobrevive ao Google trocar 2.0 por 2.5 sem avisar.
+ */
+const PREFERIDOS = ["flash-lite", "flash", "pro"] as const;
+const PROIBIDOS = ["embedding", "aqa", "imagen", "veo", "tts", "vision", "learnlm"];
+const ULTIMO_RECURSO = "gemini-2.0-flash";
+
+const cache = new CacheDeModelo();
+
+const listaSchema = z.object({
+  models: z
+    .array(
+      z.object({
+        name: z.string(),
+        supportedGenerationMethods: z.array(z.string()).nullish(),
+      }),
+    )
+    .nullish(),
+});
+
+/** O que a API diz existir hoje, só o que serve para conversar. */
+async function listarModelos(): Promise<string[]> {
+  const resposta = await fetch(`${base()}?pageSize=200`, {
+    headers: { "x-goog-api-key": chave() },
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!resposta.ok) throw await erroDaResposta(ID, ROTULO, resposta);
+
+  const dados = listaSchema.parse(await resposta.json());
+  const servíveis = (dados.models ?? [])
+    // A API devolve "models/gemini-2.0-flash"; o prefixo não vai na chamada.
+    .map((m) => m.name.replace(/^models\//, ""))
+    .filter((id) => !PROIBIDOS.some((p) => id.toLowerCase().includes(p)));
+
+  const comGeracao = (dados.models ?? [])
+    .filter((m) => (m.supportedGenerationMethods ?? []).includes("generateContent"))
+    .map((m) => m.name.replace(/^models\//, ""));
+
+  // Quando a API informa os métodos, respeita; quando não informa, não descarta.
+  const base_ = comGeracao.length > 0 ? servíveis.filter((id) => comGeracao.includes(id)) : servíveis;
+
+  const ordenados: string[] = [];
+  for (const trecho of PREFERIDOS) {
+    for (const id of base_) {
+      if (id.toLowerCase().includes(trecho) && !ordenados.includes(id)) ordenados.push(id);
+    }
+  }
+  for (const id of base_) if (!ordenados.includes(id)) ordenados.push(id);
+  return ordenados;
+}
+
+async function resolverModelo(): Promise<string> {
+  const doAmbiente = (process.env.MB_MODEL_GEMINI ?? "").trim();
+  if (doAmbiente) return doAmbiente;
+
+  const emCache = cache.ler();
+  if (emCache) return emCache;
+
+  try {
+    const escolhido = preferir(await listarModelos(), PREFERIDOS);
+    if (escolhido) return cache.gravar(escolhido);
+  } catch {
+    // Listagem indisponível não impede tentar com o último recurso.
+  }
+  return ULTIMO_RECURSO;
+}
 
 function corpo(sistema: string, turnos: Turno[], maxTokens: number, temperatura: number) {
   return {
@@ -55,12 +126,28 @@ function corpo(sistema: string, turnos: Turno[], maxTokens: number, temperatura:
 }
 
 async function chamar(caminho: string, corpoJson: Record<string, unknown>): Promise<Response> {
-  const resposta = await fetch(`${base()}/${modelo()}:${caminho}`, {
-    method: "POST",
-    headers: { "x-goog-api-key": chave(), "content-type": "application/json" },
-    body: JSON.stringify(corpoJson),
-    signal: AbortSignal.timeout(caminho.includes("stream") ? 120_000 : 60_000),
-  });
+  const enviar = async (modeloEscolhido: string) =>
+    fetch(`${base()}/${modeloEscolhido}:${caminho}`, {
+      method: "POST",
+      headers: { "x-goog-api-key": chave(), "content-type": "application/json" },
+      body: JSON.stringify(corpoJson),
+      signal: AbortSignal.timeout(caminho.includes("stream") ? 120_000 : 60_000),
+    });
+
+  const escolhido = await resolverModelo();
+  let resposta = await enviar(escolhido);
+
+  // Modelo aposentado: esquece, pergunta de novo, tenta uma vez. Só quando o
+  // modelo veio da descoberta — o do ambiente é escolha explícita de alguém.
+  if (!resposta.ok && !(process.env.MB_MODEL_GEMINI ?? "").trim()) {
+    const corpoDoErro = await resposta.clone().text().catch(() => "");
+    if (ehModeloDesconhecido(resposta.status, corpoDoErro)) {
+      cache.esquecer();
+      const outro = await resolverModelo();
+      if (outro !== escolhido) resposta = await enviar(outro);
+    }
+  }
+
   if (!resposta.ok) throw await erroDaResposta(ID, ROTULO, resposta);
   return resposta;
 }
@@ -75,7 +162,9 @@ function textoDe(bruto: unknown): string {
 export const provedorGemini: Provedor = {
   id: ID,
   variavelChave: "GEMINI_API_KEY",
-  modelo,
+  modelo: () => (process.env.MB_MODEL_GEMINI ?? "").trim() || cache.ler() || "(a descobrir)",
+  listarModelos,
+  resolverModelo,
   disponivel: () => chave().length > 0,
 
   async responder(opcoes: OpcoesConversa): Promise<string> {

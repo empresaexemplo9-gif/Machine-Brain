@@ -25,8 +25,12 @@ export interface Provedor {
   id: ModoIA;
   /** O nome da variável de ambiente que liga este modo. */
   variavelChave: string;
-  /** Modelo efetivamente em uso — aparece no diagnóstico. */
+  /** Modelo em uso, para exibição. Pode ser "(a descobrir)" antes da 1ª chamada. */
   modelo(): string;
+  /** Modelos gratuitos que o provedor diz ter, na ordem de preferência. */
+  listarModelos(): Promise<string[]>;
+  /** O que será usado na próxima chamada: o do ambiente, ou o descoberto. */
+  resolverModelo(): Promise<string>;
   disponivel(): boolean;
   responder(opcoes: OpcoesConversa): Promise<string>;
   responderEmFluxo(opcoes: OpcoesConversa): AsyncGenerator<string, void, unknown>;
@@ -80,6 +84,67 @@ export async function erroDaResposta(
     resposta.status,
     `O modo ${rotulo} respondeu com HTTP ${resposta.status}. ${detalhe}`,
   );
+}
+
+/**
+ * Cache do modelo descoberto.
+ *
+ * A descoberta é uma requisição a mais; fazê-la a cada mensagem seria desperdício
+ * e ainda contaria contra a cota. Dez minutos é curto o bastante para um modelo
+ * aposentado ser percebido no mesmo dia e longo o bastante para não pesar.
+ */
+export class CacheDeModelo {
+  private valor: string | null = null;
+  private em = 0;
+
+  constructor(private readonly ttlMs = 10 * 60 * 1000) {}
+
+  ler(): string | null {
+    if (this.valor && Date.now() - this.em < this.ttlMs) return this.valor;
+    return null;
+  }
+
+  gravar(modelo: string): string {
+    this.valor = modelo;
+    this.em = Date.now();
+    return modelo;
+  }
+
+  esquecer(): void {
+    this.valor = null;
+    this.em = 0;
+  }
+}
+
+/** O erro do provedor indica que o modelo pedido não existe? */
+export function ehModeloDesconhecido(status: number, corpo: string): boolean {
+  if (status !== 400 && status !== 404) return false;
+  const texto = corpo.toLowerCase();
+  return (
+    texto.includes("model") &&
+    (texto.includes("not found") ||
+      texto.includes("does not exist") ||
+      texto.includes("not exist") ||
+      texto.includes("decommissioned") ||
+      texto.includes("unknown") ||
+      texto.includes("invalid"))
+  );
+}
+
+/**
+ * Escolhe um modelo da lista do provedor.
+ *
+ * `preferidos` são trechos de nome, em ordem: o primeiro modelo cujo id contém
+ * o primeiro trecho ganha. Trecho e não id exato de propósito — provedor troca
+ * a versão ("llama-3.3" vira "llama-4") sem avisar, e casar por família
+ * sobrevive a isso; casar por id exato é o que quebrou antes.
+ */
+export function preferir(modelos: string[], preferidos: readonly string[]): string | null {
+  for (const trecho of preferidos) {
+    const achado = modelos.find((m) => m.toLowerCase().includes(trecho.toLowerCase()));
+    if (achado) return achado;
+  }
+  return modelos[0] ?? null;
 }
 
 /** Linhas `data:` de um fluxo SSE, já sem o prefixo. */

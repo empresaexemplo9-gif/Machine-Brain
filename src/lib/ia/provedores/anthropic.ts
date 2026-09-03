@@ -38,6 +38,13 @@ export const provedorAnthropic: Provedor = {
   id: ID,
   variavelChave: "ANTHROPIC_API_KEY",
   modelo,
+  // Aqui não há descoberta: o modo é pago e os ids são estáveis, então trocar
+  // de modelo sozinho gastaria dinheiro de um jeito que ninguém pediu.
+  listarModelos: async () => {
+    const pagina = await obterCliente().models.list({ limit: 20 });
+    return pagina.data.map((m) => m.id);
+  },
+  resolverModelo: async () => modelo(),
   disponivel: () => chave().length > 0,
 
   async responder(opcoes: OpcoesConversa): Promise<string> {
