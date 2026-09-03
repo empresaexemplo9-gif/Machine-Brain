@@ -1,3 +1,4 @@
+import { planoAtual } from "@/lib/auth";
 import "server-only";
 
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -20,6 +21,7 @@ export async function gerarPlanoDeEstudos(opcoes: {
   }));
 
   const plano = await gerarEstruturado({
+    plano: await planoAtual(),
     sistema: promptPlanoDeEstudos({
       nomeAluno: opcoes.nomeAluno,
       periodo: opcoes.periodo,

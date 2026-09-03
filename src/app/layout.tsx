@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0e13",
+  // Mesmo valor de --color-fundo. A barra do navegador no celular usa isto;
+  // desalinhada, aparece uma faixa de outra cor acima da página.
+  themeColor: "#080d18",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -73,6 +73,16 @@ export function Cabecalho({
               </>
             )}
           </Link>
+          {/* Só quem ainda não é Pro vê o convite. Oferecer assinatura a quem
+              já assinou é ruído, e pior: parece que o pagamento não pegou. */}
+          {usuario.plano !== "pro" && (
+            <Link
+              href="/assinar"
+              className="hidden rounded-full border border-[var(--color-ouro-fraco)] bg-[var(--color-ouro)]/10 px-2.5 py-1 text-xs font-medium text-[var(--color-ouro)] transition-colors hover:bg-[var(--color-ouro)]/20 sm:block"
+            >
+              Assinar Pro
+            </Link>
+          )}
           <Link
             href="/perfil"
             className="hidden text-xs text-[var(--color-texto-fraco)] hover:text-[var(--color-texto)] sm:block"

@@ -1,3 +1,4 @@
+import { planoAtual } from "@/lib/auth";
 import "server-only";
 
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -37,6 +38,7 @@ export async function gerarSimulado(opcoes: {
   const fontes = buscarFontes(consulta, { limite: 8, areas: opcoes.disciplina.areas });
 
   const gerado = await gerarEstruturado({
+    plano: await planoAtual(),
     sistema: promptGeradorDeQuestoes({
       disciplina: opcoes.disciplina,
       tema: opcoes.tema,

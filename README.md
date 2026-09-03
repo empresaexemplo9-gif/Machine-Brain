@@ -179,6 +179,14 @@ O controle é em duas camadas, e as duas importam. A interface **não oferece** 
 modo que o plano não cobre; o servidor **não entrega**, porque `escolherProvedor`
 filtra pelo plano lido da sessão — nunca pelo corpo da requisição.
 
+A aplicação lê o plano da view `meu_perfil`, não da coluna `perfis.plano`. A
+diferença importa: a coluna só muda quando alguém é marcado à mão, então uma
+assinatura paga e válida não mudaria nada — quem pagasse continuaria no
+gratuito. A view resolve os dois casos numa consulta só, e é `security_invoker`,
+o que faz o RLS de `perfis` e de `assinaturas` continuar valendo dentro dela.
+Sem essa opção a view rodaria como dona e devolveria o perfil de todo mundo; a
+bateria de RLS prova que não devolve.
+
 No banco há uma terceira: `perfis.plano` não é escrita pelo usuário. A política
 de RLS autoriza a pessoa a alterar a própria linha, e é isso que se quer para
 nome e ambiente — quem barra a coluna `plano` é um **grant por coluna**. Sem

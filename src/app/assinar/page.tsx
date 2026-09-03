@@ -32,7 +32,8 @@ export default async function PaginaDeAssinatura() {
         type: "svg",
         margin: 1,
         errorCorrectionLevel: "M",
-        color: { dark: "#0a0e13", light: "#ffffff" },
+        // Contraste alto e fundo branco: leitor de QR erra com fundo colorido.
+        color: { dark: "#05080f", light: "#ffffff" },
       })
     : null;
 

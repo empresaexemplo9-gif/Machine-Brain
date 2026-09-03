@@ -118,8 +118,10 @@ export async function usuarioAtual(): Promise<Usuario | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // meu_perfil, e não perfis: a view resolve o plano considerando assinatura
+  // válida. Lendo perfis.plano direto, quem pagasse continuaria no gratuito.
   const { data: perfil } = await supabase
-    .from("perfis")
+    .from("meu_perfil")
     .select("nome, ambiente, plano")
     .eq("id", user.id)
     .maybeSingle();
@@ -135,6 +137,18 @@ export async function usuarioAtual(): Promise<Usuario | null> {
     // liberar o modo pago.
     plano: ehPlano(perfil?.plano) ? perfil.plano : PLANO_PADRAO,
   };
+}
+
+/**
+ * Plano da conta atual, para quem precisa dele sem precisar do usuário inteiro.
+ *
+ * Sem sessão devolve o mais restritivo. Serve aos serviços de geração, que
+ * rodam fora do chat e não recebem escolha de modo — sem isto, uma conta Pro
+ * num deploy que só tenha a chave paga configurada ficaria sem gerar nada,
+ * porque o padrão de escolherProvedor é o plano gratuito.
+ */
+export async function planoAtual(): Promise<Plano> {
+  return (await usuarioAtual())?.plano ?? PLANO_PADRAO;
 }
 
 /** Para páginas que só existem logado. Redireciona quando não há sessão. */

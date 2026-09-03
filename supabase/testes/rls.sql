@@ -305,11 +305,41 @@ begin
 end
 $$;
 
+-- A view meu_perfil precisa respeitar o RLS. Sem security_invoker ela rodaria
+-- como dona e devolveria o perfil de todo mundo — é o defeito mais fácil de
+-- introduzir aqui, e o mais caro.
+do $$
+declare quantos int; id_visto uuid; plano_visto text;
+begin
+  select count(*) into quantos from public.meu_perfil;
+  if quantos <> 1 then
+    raise exception 'VAZAMENTO: meu_perfil devolveu % linha(s) para Beatriz', quantos;
+  end if;
+
+  -- Pelo id, e não pelo nome: um teste anterior renomeia a Beatriz, e conferir
+  -- pelo nome tornaria esta prova dependente da ordem dos blocos.
+  select id, plano into id_visto, plano_visto from public.meu_perfil;
+  if id_visto <> '22222222-2222-2222-2222-222222222222' then
+    raise exception 'meu_perfil devolveu o perfil errado: %', id_visto;
+  end if;
+  if plano_visto <> 'gratuito' then
+    raise exception 'Beatriz, sem assinatura, deveria ver gratuito, veio %', plano_visto;
+  end if;
+end
+$$;
+
 set local request.jwt.claims = '{"sub": "11111111-1111-1111-1111-111111111111"}';
 do $$
+declare plano_visto text;
 begin
   if public.plano_efetivo() <> 'pro' then
     raise exception 'Arthur, com assinatura válida, deveria ser pro, veio %', public.plano_efetivo();
+  end if;
+
+  -- E a view tem que concordar com a função: é a view que a aplicação lê.
+  select plano into plano_visto from public.meu_perfil;
+  if plano_visto <> 'pro' then
+    raise exception 'meu_perfil não reconheceu a assinatura de Arthur: %', plano_visto;
   end if;
 end
 $$;

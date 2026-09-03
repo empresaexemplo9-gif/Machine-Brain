@@ -1,3 +1,4 @@
+import { planoAtual } from "@/lib/auth";
 import "server-only";
 
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -21,6 +22,7 @@ export async function gerarRoteiro(usuarioId: string, caso: string): Promise<num
   const fontes = buscarFontes(caso, { limite: 8 });
 
   const roteiro = await gerarEstruturado({
+    plano: await planoAtual(),
     sistema: promptRoteiroDeAtuacao(fontes),
     turnos: [
       {

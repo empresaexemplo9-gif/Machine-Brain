@@ -1,3 +1,4 @@
+import { planoAtual } from "@/lib/auth";
 import "server-only";
 
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -86,6 +87,7 @@ export async function analisarDocumento(id: number): Promise<AnaliseDeDocumento>
   const fontes = buscarFontes(documento.texto.slice(0, 4000), { limite: 8 });
 
   const analise = await gerarEstruturado({
+    plano: await planoAtual(),
     sistema: promptAnaliseDeDocumento(fontes),
     turnos: [
       {

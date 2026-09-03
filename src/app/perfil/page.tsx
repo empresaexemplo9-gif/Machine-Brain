@@ -41,6 +41,14 @@ export default async function PaginaDePerfil() {
             </span>{" "}
             — {PLANOS[usuario.plano].descricao}
           </p>
+          <p className="mt-2">
+            <Link
+              href="/assinar"
+              className="text-xs font-medium text-[var(--color-ouro)] hover:underline"
+            >
+              {usuario.plano === "pro" ? "Ver assinatura e renovar →" : "Assinar o plano Pro →"}
+            </Link>
+          </p>
         </header>
 
         <section className="cartao">
