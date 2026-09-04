@@ -313,7 +313,7 @@ export const DISCIPLINAS: Disciplina[] = [
     periodo: 4,
     emoji: "🏭",
     ementa: "Empresário, estabelecimento, nome empresarial, sociedades e títulos de crédito.",
-    areas: ["direito empresarial"],
+    areas: ["direito empresarial", "direito societário"],
     temas: [
       "Empresário e atividade empresarial",
       "Estabelecimento empresarial",
@@ -547,7 +547,7 @@ export const DISCIPLINAS: Disciplina[] = [
     periodo: 8,
     emoji: "🎖️",
     ementa: "Estatuto da Advocacia, Código de Ética, prerrogativas, honorários e infrações.",
-    areas: ["ética profissional", "prática jurídica"],
+    areas: ["ética profissional", "advocacia", "prática jurídica"],
     temas: [
       "Prerrogativas do advogado",
       "Incompatibilidades e impedimentos",
@@ -594,7 +594,7 @@ export const DISCIPLINAS: Disciplina[] = [
     periodo: 9,
     emoji: "🕊️",
     ementa: "Métodos adequados de solução de conflitos, convenção de arbitragem e sentença arbitral.",
-    areas: ["direito processual civil", "prática jurídica"],
+    areas: ["arbitragem", "mediação", "direito processual civil", "prática jurídica"],
     temas: [
       "Métodos adequados de solução de conflitos",
       "Convenção de arbitragem",
