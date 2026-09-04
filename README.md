@@ -156,6 +156,13 @@ com tudo preenchido no painel.
 A chave `service_role` (`sb_secret_...`) não entra em lugar nenhum: ela ignora o
 RLS, e a aplicação não a usa.
 
+Se a plataforma quebrar com *"Cannot convert argument to a ByteString because
+the character at index N has a value of 8212"*, o valor de uma variável foi
+colado com texto grudado. 8212 é o travessão `—`. A URL e a chave viram
+cabeçalho HTTP na chamada ao Supabase, e cabeçalho só aceita caracteres até 255.
+`config.ts` detecta isso e `/diagnostico` diz qual variável e em que posição —
+mas o erro cru, sem essa checagem, não diz nem uma coisa nem outra.
+
 Se a tela de cadastro continuar dizendo *"Supabase não configurado"*, abra
 **`/diagnostico`** no próprio deploy. A página roda de dentro do processo no ar
 e distingue as cinco causas com o mesmo sintoma: variável não salva, salva no

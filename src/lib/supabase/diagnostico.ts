@@ -3,6 +3,7 @@ import {
   CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA,
   SUPABASE_CHAVE_PUBLICA,
   SUPABASE_URL,
+  VARIAVEIS_COM_CARACTERE_INVALIDO,
 } from "./config";
 
 /**
@@ -111,6 +112,23 @@ export async function diagnosticar(): Promise<Diagnostico> {
     ["SUPABASE_ANON_KEY", process.env.SUPABASE_ANON_KEY],
     ["SUPABASE_ANON_KEY_DEV", process.env.SUPABASE_ANON_KEY_DEV],
   );
+
+  // Antes de qualquer outra coisa: valor que não cabe em cabeçalho HTTP derruba
+  // a primeira chamada ao Supabase com um erro de biblioteca que não diz nada.
+  for (const defeito of VARIAVEIS_COM_CARACTERE_INVALIDO) {
+    checagens.push({
+      titulo: `${defeito.variavel} tem um caractere que não pode ir em cabeçalho HTTP`,
+      estado: "falha",
+      detalhe:
+        `"${defeito.caractere}" (código ${defeito.codigo}) na posição ${defeito.posicao}. ` +
+        `Cabeçalho HTTP só aceita caracteres até 255, e a chave vira cabeçalho na chamada ` +
+        `ao Supabase — por isso o erro aparece como "Cannot convert argument to a ByteString".`,
+    });
+    passos.unshift(
+      `Reabra ${defeito.variavel} no painel e cole SÓ o valor: provavelmente veio texto ` +
+        `grudado junto (um rótulo, uma legenda, uma linha de documentação).`,
+    );
+  }
 
   if (SUPABASE_URL) {
     checagens.push({

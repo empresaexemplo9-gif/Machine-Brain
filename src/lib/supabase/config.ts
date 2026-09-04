@@ -25,7 +25,41 @@ function primeiro(...valores: (string | undefined)[]): string {
   return "";
 }
 
-export const SUPABASE_URL = primeiro(
+/**
+ * A URL e a chave viram cabeçalho HTTP (`apikey`, `Authorization`) na primeira
+ * chamada ao Supabase. Cabeçalho só aceita Latin-1: um caractere acima de 255
+ * faz o fetch estourar com
+ *
+ *   "Cannot convert argument to a ByteString because the character at index N
+ *    has a value of 8212 which is greater than 255"
+ *
+ * 8212 é o travessão "—". Ele chega ali quando o valor é colado no painel com
+ * texto grudado — uma linha de documentação, uma legenda, o rótulo junto do
+ * valor. O erro cru não diz qual variável nem o que houve, e some no meio de um
+ * stack trace de biblioteca.
+ *
+ * Detectar aqui troca esse erro por uma frase que nomeia a variável e o
+ * caractere. É a diferença entre "a plataforma quebrou" e "sobrou texto colado
+ * na variável X".
+ */
+export interface DefeitoDeVariavel {
+  variavel: string;
+  posicao: number;
+  caractere: string;
+  codigo: number;
+}
+
+function acharCaractereInvalido(valor: string, variavel: string): DefeitoDeVariavel | null {
+  for (let i = 0; i < valor.length; i += 1) {
+    const codigo = valor.codePointAt(i) ?? 0;
+    if (codigo > 255) {
+      return { variavel, posicao: i, caractere: valor[i], codigo };
+    }
+  }
+  return null;
+}
+
+const URL_CONFIGURADA = primeiro(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_URL,
   process.env.SUPABASE_URL_DEV,
@@ -68,9 +102,25 @@ export function ehChaveSecreta(chave: string): boolean {
 export const CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA =
   CHAVE_CONFIGURADA.length > 0 && ehChaveSecreta(CHAVE_CONFIGURADA);
 
-export const SUPABASE_CHAVE_PUBLICA = CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA
-  ? ""
-  : CHAVE_CONFIGURADA;
+/**
+ * Defeitos que impedem o valor de virar cabeçalho. Vazio = nada a relatar.
+ *
+ * A variável é nomeada pelo nome que o painel mostra, não pela interna: quem
+ * vai consertar está olhando para o painel.
+ */
+export const VARIAVEIS_COM_CARACTERE_INVALIDO: DefeitoDeVariavel[] = [
+  acharCaractereInvalido(URL_CONFIGURADA, "a URL do Supabase"),
+  acharCaractereInvalido(CHAVE_CONFIGURADA, "a chave pública do Supabase"),
+].filter((d): d is DefeitoDeVariavel => d !== null);
+
+/** Valor inválido é tratado como ausente: melhor o aviso do que o erro cru. */
+const URL_UTILIZAVEL = acharCaractereInvalido(URL_CONFIGURADA, "") === null;
+const CHAVE_UTILIZAVEL = acharCaractereInvalido(CHAVE_CONFIGURADA, "") === null;
+
+export const SUPABASE_URL = URL_UTILIZAVEL ? URL_CONFIGURADA : "";
+
+export const SUPABASE_CHAVE_PUBLICA =
+  CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA || !CHAVE_UTILIZAVEL ? "" : CHAVE_CONFIGURADA;
 
 /**
  * Sem projeto configurado a aplicação continua subindo, mas diz o que falta em
