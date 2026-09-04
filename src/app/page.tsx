@@ -76,11 +76,11 @@ export default async function Inicio() {
         <p className="relative mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-ouro-fraco)] bg-[var(--color-ouro)]/5 px-3 py-1 text-xs font-medium text-[var(--color-ouro)]">
           Seu professor de Direito e seu assistente jurídico no mesmo lugar
         </p>
-        <h1 className="relative max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+        <h1 className="relative max-w-5xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl xl:text-6xl">
           A plataforma que acompanha você{" "}
           <span className="text-[var(--color-ouro)]">do primeiro período à advocacia</span>.
         </h1>
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-[var(--color-texto-suave)]">
+        <p className="mt-5 max-w-3xl text-base leading-relaxed text-[var(--color-texto-suave)] xl:text-lg">
           Não é mais uma IA jurídica genérica. É uma faculdade virtual que vira escritório:
           o mesmo cadastro atravessa a graduação, o Exame de Ordem e a prática profissional —
           e toda afirmação sobre a lei vem com a fonte oficial ao lado.
@@ -166,7 +166,7 @@ export default async function Inicio() {
           <h2 className="text-lg font-bold text-[var(--color-ouro)]">
             A IA não é a fonte. A fonte é a fonte.
           </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-[var(--color-texto-suave)]">
+          <p className="mt-3 max-w-4xl text-sm leading-relaxed text-[var(--color-texto-suave)]">
             O maior risco de uma ferramenta jurídica com IA é inventar lei com confiança. Aqui o
             modelo só pode citar dispositivos de um catálogo transcrito de fonte oficial, com
             endereço público e data de conferência. Toda resposta passa por uma auditoria

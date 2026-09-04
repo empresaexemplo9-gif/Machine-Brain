@@ -133,8 +133,14 @@ body::after {
     @apply w-full px-5 py-8 sm:px-8 lg:px-12;
   }
 
-  /* Parágrafo de texto corrido. Some em telas estreitas, limita em telas largas. */
-  .prosa {
+  /* Medida de leitura para texto de APOIO (subtítulos, explicações curtas).
+     Nunca para a resposta do modelo — ver o comentário em Prosa.tsx.
+
+     O nome não é "prosa" de propósito: o componente Prosa já usava essa palavra
+     como classe desde o primeiro commit, sem CSS por trás. Ao definir .prosa
+     aqui, eu capei retroativamente toda resposta do modelo em 70 caracteres —
+     a tela principal da plataforma — sem tocar em nenhum arquivo dela. */
+  .medida {
     @apply max-w-[70ch];
   }
 

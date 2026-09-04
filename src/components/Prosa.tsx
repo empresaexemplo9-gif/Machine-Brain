@@ -149,5 +149,8 @@ export function Prosa({
   }
   fecharLista();
 
+  // A classe .prosa carrega SÓ tipografia (globals.css) — sem teto de largura.
+  // Quem decide a linha é o layout de quem chama: o chat abre uma coluna de
+  // fontes ao lado, e é essa coluna que dá a medida.
   return <div className={`prosa ${className}`}>{blocos}</div>;
 }

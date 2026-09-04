@@ -35,7 +35,7 @@ export default async function PaginaQuestoes({
         <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
           <IconeQuestoes className="text-[var(--color-ouro)]" tamanho={24} /> Gerador de questões
         </h1>
-        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 medida text-sm text-[var(--color-texto-suave)]">
           Peça quantas questões quiser, no estilo e na dificuldade que você precisa. A correção
           explica por que a certa está certa — e por que a errada mais tentadora te pegou.
         </p>

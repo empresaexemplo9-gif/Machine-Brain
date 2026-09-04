@@ -20,7 +20,7 @@ export default async function PaginaDocumentos() {
         <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
           <IconeProcesso className="text-[var(--color-ouro)]" tamanho={24} /> Análise de documentos
         </h1>
-        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 medida text-sm text-[var(--color-texto-suave)]">
           Envie uma peça, um contrato ou os autos. A plataforma extrai o texto e devolve o caso
           organizado — com os pontos que merecem sua atenção antes de qualquer coisa.
         </p>

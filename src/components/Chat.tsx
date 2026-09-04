@@ -263,7 +263,10 @@ export function Chat({
               </p>
             </div>
           ) : (
-            <article key={i} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <article
+              key={i}
+              className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_26rem]"
+            >
               <div className="min-w-0">
                 {bolha.escrevendo && !bolha.conteudo ? (
                   <p className="text-sm text-[var(--color-texto-fraco)]">

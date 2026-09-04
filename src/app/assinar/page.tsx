@@ -43,7 +43,7 @@ export default async function PaginaDeAssinatura() {
       <main className="pagina space-y-6">
         <header>
           <h1 className="text-2xl font-bold tracking-tight">Assinar o plano Pro</h1>
-          <p className="prosa mt-2 text-sm leading-relaxed text-[var(--color-texto-suave)]">
+          <p className="medida mt-2 text-sm leading-relaxed text-[var(--color-texto-suave)]">
             Pré-pago por PIX. Você escolhe quanto pagar, e o valor define quantos dias valem. Não há
             cobrança recorrente: quando o período acaba, a conta volta ao plano gratuito e continua
             funcionando — só o modo Parecer sai do seletor.

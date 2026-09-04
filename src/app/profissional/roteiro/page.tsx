@@ -20,7 +20,7 @@ export default async function PaginaRoteiro() {
         <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight">
           <IconeBussola className="text-[var(--color-ouro)]" tamanho={24} /> Nunca vi esse caso
         </h1>
-        <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
+        <p className="mt-1 medida text-sm text-[var(--color-texto-suave)]">
           Chegou um tipo de causa que você não domina? Descreva o caso e receba um roteiro de
           atuação: o que fazer primeiro, o que perguntar antes de seguir e onde quem é novo naquilo
           costuma errar.

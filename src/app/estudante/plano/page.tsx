@@ -26,7 +26,7 @@ export default async function PaginaDoPlano() {
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">🎯 Plano de estudos</h1>
-          <p className="mt-1 prosa text-sm text-[var(--color-texto-suave)]">
+          <p className="mt-1 medida text-sm text-[var(--color-texto-suave)]">
             Montado a partir do seu desempenho real nos simulados, não de um cronograma genérico.
           </p>
         </div>
