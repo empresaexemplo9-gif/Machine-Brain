@@ -4,6 +4,8 @@ import {
   SUPABASE_CHAVE_PUBLICA,
   SUPABASE_URL,
   VARIAVEIS_COM_CARACTERE_INVALIDO,
+  refDaChave,
+  refDaUrl,
 } from "./config";
 
 /**
@@ -174,6 +176,34 @@ export async function diagnosticar(): Promise<Diagnostico> {
       `Defina NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (painel do Supabase → Project Settings → ` +
         `API Keys) ${ONDE}.`,
     );
+  }
+
+  // Par trocado: URL de um projeto com chave de outro. É o que acontece ao
+  // migrar de projeto e atualizar só metade das variáveis, e o Supabase
+  // responde com "Invalid API key" sem dizer qual das duas está errada.
+  {
+    const refUrl = refDaUrl(SUPABASE_URL);
+    const refChave = refDaChave(SUPABASE_CHAVE_PUBLICA);
+    if (refUrl && refChave && refUrl !== refChave) {
+      checagens.push({
+        titulo: "a chave é de OUTRO projeto",
+        estado: "falha",
+        detalhe:
+          `a URL aponta para o projeto "${refUrl}" e a chave pertence ao projeto ` +
+          `"${refChave}". É isto que o Supabase recusa com "Invalid API key".`,
+      });
+      passos.unshift(
+        `Pegue a chave do projeto ${refUrl} (painel → Project Settings → API Keys) e ` +
+          `substitua o valor de ${nomeDaChave}. Se sobrou variável antiga de outro ` +
+          `projeto no painel do deploy, apague — uma delas pode estar vencendo a ordem.`,
+      );
+    } else if (refUrl && refChave) {
+      checagens.push({
+        titulo: "URL e chave são do mesmo projeto",
+        estado: "ok",
+        detalhe: refUrl,
+      });
+    }
   }
 
   // A aplicação não usa service_role em lugar nenhum. Se ela existe no ambiente,

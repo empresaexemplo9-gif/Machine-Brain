@@ -108,6 +108,36 @@ export const CHAVE_SECRETA_NO_LUGAR_DA_PUBLICA =
  * A variável é nomeada pelo nome que o painel mostra, não pela interna: quem
  * vai consertar está olhando para o painel.
  */
+/**
+ * Ref do projeto — o subdomínio de https://<ref>.supabase.co.
+ *
+ * Serve para cruzar com o ref que a chave carrega e detectar o par trocado:
+ * URL de um projeto com chave de outro. O Supabase responde a isso com
+ * "Invalid API key", que não diz qual das duas está errada.
+ */
+export function refDaUrl(url: string): string | null {
+  return /^https:\/\/([a-z0-9-]+)\.supabase\.(co|in)\/?$/.exec(url.trim())?.[1] ?? null;
+}
+
+/**
+ * Ref embutido na chave anon legada (JWT).
+ *
+ * A chave publicável nova (sb_publishable_...) é opaca e não carrega o ref, de
+ * modo que este cruzamento só funciona com a legada. Vale mesmo assim: é
+ * justamente quem migrou de projeto que costuma ter as duas na mão.
+ */
+export function refDaChave(chave: string): string | null {
+  const payload = chave.split(".")[1];
+  if (!payload) return null;
+  try {
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/")) as string;
+    const ref = (JSON.parse(json) as { ref?: string }).ref;
+    return typeof ref === "string" && ref.length > 0 ? ref : null;
+  } catch {
+    return null;
+  }
+}
+
 export const VARIAVEIS_COM_CARACTERE_INVALIDO: DefeitoDeVariavel[] = [
   acharCaractereInvalido(URL_CONFIGURADA, "a URL do Supabase"),
   acharCaractereInvalido(CHAVE_CONFIGURADA, "a chave pública do Supabase"),
